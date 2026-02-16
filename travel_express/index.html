@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Travel Express - Discussions</title>
+    <link rel="stylesheet" href="./css/stylepagedeDiscussion.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="theme-dark">
+
+    <!-- ============================================================ -->
+    <!-- LAYOUT ADMIN/SECRETAIRE -->
+    <!-- ============================================================ -->
+    <div class="app-wrapper" id="appMainAdmin" style="display: none;">
+        
+        <div class="sidebar" id="sidebar">
+            <header class="header-left">
+                <div class="header-actions">
+                    <!-- ICONES ADMIN -->
+                    <button class="icon-btn" onclick="window.ouvrirConfig('groupe')" title="Nouveau Groupe"><i class="fas fa-users"></i></button>
+                    <button class="icon-btn" onclick="window.ouvrirConfig('diffusion')" title="Diffusion"><i class="fas fa-bullhorn"></i></button>
+                    <select id="themeSelector" class="theme-select" onchange="window.changerTheme(this.value)">
+                        <option value="theme-dark">🌑 Sombre</option>
+                        <option value="theme-light">☀️ Clair</option>
+                    </select>
+                </div>
+            </header>
+
+            <!-- TABS ADMIN : Discussions, Groupes, Diffusions -->
+            <nav class="nav-tabs-main" id="navTabsAdmin">
+                <button class="tab-main active" onclick="window.switchTab('discussions')"><i class="fas fa-comment"></i> Discussions</button>
+                <button class="tab-main" onclick="window.switchTab('groupes')"><i class="fas fa-users"></i> Groupes</button>
+                <button class="tab-main" onclick="window.switchTab('diffusions')"><i class="fas fa-bullhorn"></i> Diffusions</button>
+            </nav>
+
+            <!-- LISTE DES CONTACTS (ADMIN) -->
+            <div id="contactsListAdmin" class="contacts-list" style="padding: 12px; border-bottom: 1px solid var(--border);">
+                <h3 style="color: var(--gold); font-size: 0.9em; margin-bottom: 8px;">👥 Contacts</h3>
+                <div id="contactsGridAdmin" style="display: flex; gap: 8px; overflow-x: auto; padding: 4px 0; padding-bottom: 8px; align-items: center;"></div>
+            </div>
+
+            <!-- LISTE DES DISCUSSIONS/GROUPES/DIFFUSIONS -->
+            <div class="chat-list" id="chatList"></div>
+        </div>
+
+        <div class="main-chat" id="mainChat">
+            <header class="header-right" id="chatHeader">
+                <button class="mobile-back" onclick="window.toggleMobileView(false)"><i class="fas fa-arrow-left"></i></button>
+                <div id="chatHeaderTitle" style="flex:1">Sélectionnez une discussion</div>
+            </header>
+
+            <div class="messages-container" id="messages"></div>
+
+            <div id="replyPreview" class="reply-preview-bar" style="display:none;">
+                <div class="reply-content">
+                    <small id="replySender" style="color:var(--gold); font-weight: bold;"></small>
+                    <div id="replyText" class="truncate"></div>
+                </div>
+                <button onclick="window.annulerReponse()" class="icon-btn"><i class="fas fa-times"></i></button>
+            </div>
+
+            <div id="voiceOverlay" class="voice-overlay" style="display: none;">
+                <div class="vocal-anim">
+                    <div class="pulse-ring"></div>
+                    <i class="fas fa-microphone"></i>
+                </div>
+                <span id="voiceTimer">Enregistrement...</span>
+            </div>
+
+            <footer class="footer-chat">
+                <button class="icon-btn" onclick="window.triggerFileUpload()"><i class="fas fa-paperclip"></i></button>
+                <input type="file" id="fileInput" style="display:none" onchange="window.handleFileUpload(event)">
+                <div class="message-input-wrapper">
+                    <input type="text" id="msgInput" placeholder="Tapez un message" autocomplete="off">
+                </div>
+                <div class="send-actions">
+                    <button id="micBtn" class="icon-btn mic-btn"><i class="fas fa-microphone" id="micIcon"></i></button>
+                    <button id="btnEnvoyer" class="icon-btn send-btn" onclick="window.envoyerMessageAction()" style="display:none;"><i class="fas fa-paper-plane"></i></button>
+                </div>
+            </footer>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- LAYOUT STUDENT (SIMPLIFIÉ) -->
+    <!-- ============================================================ -->
+    <div class="app-wrapper" id="appMainStudent" style="display: none;">
+        
+        <div class="sidebar" id="sidebarStudent">
+            <header class="header-left">
+                <div class="header-actions">
+                    <select id="themeSelectorStudent" class="theme-select" onchange="window.changerTheme(this.value)">
+                        <option value="theme-dark">🌑 Sombre</option>
+                        <option value="theme-light">☀️ Clair</option>
+                    </select>
+                </div>
+            </header>
+
+            <!-- TABS STUDENT : Discussions SEULE -->
+            <nav class="nav-tabs-main" id="navTabsStudent">
+                <button class="tab-main active" onclick="window.switchTab('discussions')"><i class="fas fa-comment"></i> Discussions</button>
+            </nav>
+
+            <!-- ASSISTANT SOCIAL (Super Admin) -->
+            <div id="socialWorkerListStudent" class="contacts-list" style="padding: 12px; border-bottom: 1px solid var(--border);">
+                <h3 style="color: var(--gold); font-size: 0.9em; margin-bottom: 8px;">👤 Assistant Social</h3>
+                <div id="socialWorkerGridStudent" style="display: grid; grid-template-columns: 1fr; gap: 8px;"></div>
+            </div>
+
+            <!-- LISTE DES GROUPES STUDENT -->
+            <div id="contactsListStudent" class="contacts-list" style="padding: 12px; border-bottom: 1px solid var(--border);">
+                <h3 style="color: var(--gold); font-size: 0.9em; margin-bottom: 8px;">👥 Mes Groupes</h3>
+                <div id="contactsGridStudent" style="display: grid; grid-template-columns: 1fr; gap: 8px;"></div>
+            </div>
+
+            <!-- LISTE DES DISCUSSIONS -->
+            <div class="chat-list" id="chatListStudent"></div>
+        </div>
+
+        <div class="main-chat" id="mainChatStudent">
+            <header class="header-right" id="chatHeaderStudent">
+                <button class="mobile-back" onclick="window.toggleMobileView(false)"><i class="fas fa-arrow-left"></i></button>
+                <div id="chatHeaderTitleStudent" style="flex:1">Sélectionnez une discussion</div>
+            </header>
+
+            <div class="messages-container" id="messagesStudent"></div>
+
+            <div id="replyPreviewStudent" class="reply-preview-bar" style="display:none;">
+                <div class="reply-content">
+                    <small id="replySenderStudent" style="color:var(--gold); font-weight: bold;"></small>
+                    <div id="replyTextStudent" class="truncate"></div>
+                </div>
+                <button onclick="window.annulerReponse()" class="icon-btn"><i class="fas fa-times"></i></button>
+            </div>
+
+            <div id="voiceOverlayStudent" class="voice-overlay" style="display: none;">
+                <div class="vocal-anim">
+                    <div class="pulse-ring"></div>
+                    <i class="fas fa-microphone"></i>
+                </div>
+                <span id="voiceTimerStudent">Enregistrement...</span>
+            </div>
+
+            <footer class="footer-chat">
+                <button class="icon-btn" onclick="window.triggerFileUpload()"><i class="fas fa-paperclip"></i></button>
+                <input type="file" id="fileInputStudent" style="display:none" onchange="window.handleFileUpload(event)">
+                <div class="message-input-wrapper">
+                    <input type="text" id="msgInputStudent" placeholder="Tapez un message" autocomplete="off">
+                </div>
+                <div class="send-actions">
+                    <button id="micBtnStudent" class="icon-btn mic-btn"><i class="fas fa-microphone" id="micIconStudent"></i></button>
+                    <button id="btnEnvoyerStudent" class="icon-btn send-btn" onclick="window.envoyerMessageAction()" style="display:none;"><i class="fas fa-paper-plane"></i></button>
+                </div>
+            </footer>
+        </div>
+    </div>
+
+    <!-- CONTEXT MENU -->
+    <div id="contextMenu" class="wa-context-menu" style="display:none;">
+        <ul>
+            <li onclick="window.prepReply()"><i class="fas fa-reply"></i> Répondre</li>
+            <li id="ctxEditBtn" onclick="window.prepEdit()"><i class="fas fa-edit"></i> Modifier</li>
+            <li id="ctxRetransferBtn" onclick="window.retransfererMessage()" style="display: none;"><i class="fas fa-share"></i> Retransférer</li>
+            <li class="danger" onclick="window.confirmSuppression()"><i class="fas fa-trash"></i> Supprimer</li>
+        </ul>
+    </div>
+
+    <!-- LIGHTBOX -->
+    <div id="lightbox" class="lightbox-overlay" style="display:none;" onclick="window.closeLightbox()">
+        <div class="lightbox-content">
+            <button class="lightbox-close" onclick="window.closeLightbox()"><i class="fas fa-times"></i></button>
+            <button id="lightboxPrev" class="lightbox-prev" onclick="window.navigateLightbox(-1)" style="display:none;"><i class="fas fa-chevron-left"></i></button>
+            <button id="lightboxNext" class="lightbox-next" onclick="window.navigateLightbox(1)" style="display:none;"><i class="fas fa-chevron-right"></i></button>
+            <button class="lightbox-zoom-in" onclick="window.zoomIn()"><i class="fas fa-plus"></i></button>
+            <button class="lightbox-zoom-out" onclick="window.zoomOut()"><i class="fas fa-minus"></i></button>
+            <button class="lightbox-rotate" onclick="window.rotateImage()"><i class="fas fa-redo"></i></button>
+            <button class="lightbox-reset" onclick="window.resetImage()"><i class="fas fa-undo"></i></button>
+            <img id="lightboxImg" style="display:none;">
+            <video id="lightboxVideo" controls style="display:none; max-width:90%; max-height:90%;"></video>
+        </div>
+    </div>
+
+    <script src="./java_script/pagedeDiscussion.js?v=2.1"></script>
+</body>
+</html>

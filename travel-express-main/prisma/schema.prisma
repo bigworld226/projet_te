@@ -1,0 +1,317 @@
+// --- CONFIGURATION ---
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// --- IAM STYLE AWS (Identity & Access Management) ---
+
+model Role {
+  id          String       @id @default(cuid())
+  name        String       @unique // ex: "SUPERADMIN", "STUDENT_MANAGER", "QUALITY_OFFICER"
+  description String?
+  permissions Permission[]
+  users       User[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+enum Permission {
+  ALL_ACCESS            // SuperAdmin
+  MANAGE_STUDENTS       // Admin Etudiants
+  VIEW_STUDENTS
+  MANAGE_DOCUMENTS      // Admin Qualité/Docs
+  VALIDATE_DOCUMENTS    
+  MANAGE_DISCUSSIONS    // Admin Discussions
+  VIEW_FINANCES
+  MANAGE_FINANCES
+  MANAGE_UNIVERSITIES
+}
+
+// --- ENUMÉRATIONS EXISTANTES ---
+
+enum ApplicationStatus {
+  DRAFT
+  SUBMITTED
+  REJECTED
+  UNDER_REVIEW
+  ACCEPTED
+  JW202_RECEIVED
+  VISA_GRANTED
+  FLIGHT_BOOKED
+  COMPLETED
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  PARTIAL
+  REFUNDED
+}
+
+enum PaymentMethod {
+  ORANGE_MONEY
+  MOOV_MONEY
+  CASH
+  TRANSFER
+}
+
+enum DocumentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// --- UTILISATEURS & IAM ---
+
+model User {
+  id               String    @id @default(cuid())
+  email            String    @unique
+  password         String 
+  fullName         String? 
+  phone            String?
+  profileImage     String?   // URL de la photo de profil
+
+  // IAM Link
+  roleId           String
+  role             Role      @relation(fields: [roleId], references: [id])
+  isActive         Boolean   @default(true)
+
+  // Session Management (pour invalidation automatique)
+  sessionVersion   Int       @default(1)
+
+  // PWA Support
+  pushToken        String?   // Pour les notifications Firebase/VAPID
+  lastLogin        DateTime?
+
+  // Profil médical
+  passportNumber   String?       
+  specificDiseases String[]  @default([])
+  medicalHistory   String[]  @default([]) 
+  
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  // Relations
+  applications     Application[]
+  payments         Payment[]
+  activityLogs     ActivityLog[] @relation("AdminActivityLogs")
+  
+  // Messagerie
+  sentMessages     Message[]     @relation("SentMessages")
+  conversations    ConversationParticipant[]
+  groupsCreated    Group[]       @relation("GroupCreator")
+  broadcastsCreated Broadcast[]  @relation("BroadcastCreator")
+  groupMembers     GroupMember[] @relation("GroupMembers")
+  broadcastRecipients BroadcastRecipient[] @relation("BroadcastRecipients")
+  readReceipts     ReadReceipt[]
+  
+  // Audit Qualité
+  verifiedDocs     Document[]    @relation("Verifier")
+}
+
+// --- DOSSIERS DE CANDIDATURE ---
+
+model Application {
+  id              String            @id @default(cuid())
+  userId          String
+  user            User              @relation(fields: [userId], references: [id])
+  
+  country         String            @default("Chine") 
+  universityId    String? 
+  university      University?       @relation(fields: [universityId], references: [id])
+  desiredProgram  String?
+  
+  status          ApplicationStatus @default(DRAFT)
+  progress        Int               @default(0)
+  rejectionReason String?           @db.Text
+
+  applicationFee  Float             @default(500000)
+  
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  documents       Document[]
+  payments        Payment[]
+  paymentStatus   PaymentStatus     @default(PENDING)
+  
+  // Tracking des discussions liées au dossier
+  conversation    Conversation?
+}
+
+// --- DOCUMENTS (Avec Audit Qualité) ---
+
+model Document {
+  id              String         @id @default(cuid())
+  applicationId   String
+  application     Application    @relation(fields: [applicationId], references: [id])
+  type            String         // Ex: "PASSPORT", "DIPLOMA"
+  name            String
+  url             String
+  status          DocumentStatus @default(PENDING)
+  
+  // Champ Qualité : Qui a vérifié ce document ?
+  verifiedById    String?
+  verifiedBy      User?          @relation("Verifier", fields: [verifiedById], references: [id])
+  comment         String?        // Note de l'admin qualité en cas de rejet
+  
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+}
+
+// --- MESSAGERIE (Pour Admin Discussions) ---
+
+model Conversation {
+  id            String    @id @default(cuid())
+  applicationId String?   @unique
+  application   Application? @relation(fields: [applicationId], references: [id])
+  subject       String?
+  messages      Message[]
+  participants  ConversationParticipant[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model ConversationParticipant {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  userId         String
+  user           User         @relation(fields: [userId], references: [id])
+  lastRead       DateTime     @default(now())
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String?
+  conversation   Conversation? @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  groupId        String?
+  group          Group?       @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  broadcastId    String?
+  broadcast      Broadcast?   @relation(fields: [broadcastId], references: [id], onDelete: Cascade)
+  senderId       String
+  sender         User         @relation("SentMessages", fields: [senderId], references: [id])
+  content        String       @db.Text
+  attachments    String[]     // URLs des fichiers envoyés en chat
+  readReceipts   ReadReceipt[]
+  createdAt      DateTime     @default(now())
+}
+
+// --- CONFIRMATIONS DE LECTURE ---
+model ReadReceipt {
+  id        String   @id @default(cuid())
+  messageId String
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  readAt    DateTime @default(now())
+
+  @@unique([messageId, userId])
+  @@index([messageId])
+  @@index([userId])
+}
+
+// --- GROUPES DE DISCUSSION ---
+
+model Group {
+  id        String       @id @default(cuid())
+  name      String
+  createdBy String
+  creator   User         @relation("GroupCreator", fields: [createdBy], references: [id])
+  members   GroupMember[]
+  messages  Message[]
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+}
+
+model GroupMember {
+  id      String @id @default(cuid())
+  groupId String
+  group   Group  @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  userId  String
+  user    User   @relation("GroupMembers", fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// --- LISTES DE DIFFUSION ---
+
+model Broadcast {
+  id        String             @id @default(cuid())
+  name      String
+  createdBy String
+  creator   User               @relation("BroadcastCreator", fields: [createdBy], references: [id])
+  recipients BroadcastRecipient[]
+  messages  Message[]
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+}
+
+model BroadcastRecipient {
+  id          String    @id @default(cuid())
+  broadcastId String
+  broadcast   Broadcast @relation(fields: [broadcastId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User      @relation("BroadcastRecipients", fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// --- UNIVERSITÉS & FINANCES ---
+
+model University {
+  id           String        @id @default(cuid())
+  name         String
+  city         String
+  country      String        @default("Chine")
+  summary      String?
+  description  String?       @db.Text
+  costRange    String?
+  programs     String?
+  images       String[]      
+  imageUrl     String?       
+  pdfUrl       String?
+  createdAt    DateTime      @default(now())
+
+  applications Application[]
+  payments     Payment[]
+}
+
+model Payment {
+  id            String        @id @default(cuid())
+  userId        String
+  user          User          @relation(fields: [userId], references: [id])
+  applicationId String?       
+  application   Application?  @relation(fields: [applicationId], references: [id])
+  universityId  String?
+  university    University?   @relation(fields: [universityId], references: [id])
+
+  amount        Float
+  currency      String        @default("XOF")
+  method        PaymentMethod
+  status        PaymentStatus @default(PENDING)
+  reference     String?       
+  createdAt     DateTime      @default(now())
+}
+
+model ActivityLog {
+  id          String   @id @default(cuid())
+  adminId     String
+  action      String   // ex: "VALIDATED_PASSPORT", "REJECTED_APPLICATION"
+  targetType  String?
+  targetId    String?
+  details     String?
+  createdAt   DateTime @default(now())
+  admin       User     @relation("AdminActivityLogs", fields: [adminId], references: [id])
+}
+
+model FeesByCountry {
+  id        String   @id @default(cuid())
+  country   String   @unique 
+  amount    Float    
+  currency  String   @default("XOF")
+  updatedAt DateTime @updatedAt
+}
