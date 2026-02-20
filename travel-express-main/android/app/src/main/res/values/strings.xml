@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Travel Express</string>
+    <string name="title_activity_main">Travel Express</string>
+    <string name="package_name">com.travel.express</string>
+    <string name="custom_url_scheme">com.travel.express</string>
+</resources>

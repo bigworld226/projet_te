@@ -1,8 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import styles from '@/app/globals.css';
 
 interface UserData {
     id: string;
@@ -13,7 +11,6 @@ interface UserData {
 }
 
 export default function StudentSettings() {
-    const router = useRouter();
     const [formData, setFormData] = useState<UserData>({
         id: '',
         email: '',

@@ -1,5 +1,7 @@
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import HomeClient from "./HomeClient";
+import { authService } from "@/services/auth.service";
 
 // On définit les types pour Next.js 15
 interface PageProps {
@@ -12,7 +14,13 @@ export default async function Page({ searchParams }: PageProps) {
 
   // 2. Vérification de la connexion via les cookies
   const cookieStore = await cookies();
-  const isConnected = !!cookieStore.get('user_id');
+  const session = await authService.getSession();
+  const isConnected = !!cookieStore.get('user_id') || !!session?.userId;
 
-  return <HomeClient  isConnected={isConnected}/>;
+  // Rediriger les admins connectés vers leur dashboard
+  if (session?.role && session.role !== "STUDENT") {
+    redirect("/admin/dashboard");
+  }
+
+  return <HomeClient isConnected={isConnected} isAdmin={!!session?.role && session.role !== "STUDENT"} />;
 }

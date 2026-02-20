@@ -8,10 +8,10 @@ import { verifyToken } from "@/lib/jwt";
  */
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { groupId: string } }
+  { params }: { params: Promise<{ groupId: string }> }
 ) {
   try {
-    const groupId = params.groupId;
+    const { groupId } = await params;
 
     // Vérifier le token
     const authHeader = req.headers.get("authorization");

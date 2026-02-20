@@ -2,16 +2,28 @@
   "name": "agence",
   "version": "0.1.0",
   "private": true,
+  "main": "electron/main.cjs",
   "scripts": {
-    "postinstall": "prisma db push  && prisma generate",
+    "postinstall": "prisma generate",
     "dev": "next dev",
     "build": "prisma generate && next build",
+    "build:desktop": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "desktop": "electron .",
+    "icon:generate": "node electron/make-icon.cjs",
+    "standalone:prepare": "node electron/prepare-standalone.cjs",
+    "dist:portable": "npm run icon:generate && npm run build:desktop && npm run standalone:prepare && electron-builder --win portable",
+    "dist:win": "npm run icon:generate && npm run build:desktop && npm run standalone:prepare && electron-builder --win nsis portable",
+    "mobile:sync": "npx cap sync android",
+    "mobile:open": "npx cap open android"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.966.0",
     "@aws-sdk/s3-request-presigner": "^3.966.0",
+    "@capacitor/android": "^8.1.0",
+    "@capacitor/cli": "^8.1.0",
+    "@capacitor/core": "^8.1.0",
     "@supabase/supabase-js": "^2.90.1",
     "@tanstack/react-query": "^5.90.19",
     "@types/jsonwebtoken": "^9.0.10",
@@ -42,8 +54,11 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "electron": "^40.4.1",
+    "electron-builder": "^26.7.0",
     "eslint": "^9",
     "eslint-config-next": "16.1.1",
+    "png-to-ico": "^2.1.8",
     "prisma": "^6.19.2",
     "tailwindcss": "^4.1.18",
     "ts-node": "^1.7.1",
@@ -51,5 +66,32 @@
   },
   "prisma": {
     "seed": "npx tsx prisma/seed.ts"
+  },
+  "build": {
+    "appId": "com.travel.express",
+    "productName": "Travel Express",
+    "asar": false,
+    "files": [
+      "electron/**/*",
+      ".next/standalone/**/*",
+      ".next/static/**/*",
+      "public/**/*",
+      "package.json"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "icon": "electron/icon.ico",
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "Travel-Express-Setup-${version}.${ext}"
+    }
   }
 }

@@ -1,7 +1,7 @@
 ﻿// ============================================================
 // CONFIGURATION API
 // ============================================================
-const API_BASE = "http://localhost:3000";
+const API_BASE = window.location.origin || "http://localhost:3000";
 const API_URL = `${API_BASE}/api`;
 
 // ============================================================
@@ -33,6 +33,23 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+function getReadStatusMarkup(msg, isMe) {
+    if (!isMe) return "";
+    const readCount = Array.isArray(msg?.readReceipts) ? msg.readReceipts.length : 0;
+    if (readCount > 0) {
+        return `<span style="margin-left:4px; font-size:0.82em; color:#4fc3f7; letter-spacing:-1px;">✓✓</span>`;
+    }
+    return `<span style="margin-left:4px; font-size:0.82em; color:#a0a0a0; letter-spacing:-1px;">✓</span>`;
+}
+
+function getAttachmentType(att) {
+    const normalized = String(att || "").toLowerCase().split("?")[0].split("#")[0];
+    if (normalized.includes('/image/upload/') || /\.(jpg|jpeg|png|gif|webp|bmp|svg|avif)$/.test(normalized)) return "image";
+    if (normalized.includes('/audio/upload/') || /\.(mp3|wav|ogg|oga|m4a|aac|opus|webm)$/.test(normalized)) return "audio";
+    if (normalized.includes('/video/upload/') || /\.(mp4|mov|mkv|avi|m4v)$/.test(normalized)) return "video";
+    return "file";
 }
 
 // ============================================================
@@ -134,25 +151,31 @@ styleEl.innerHTML = `
     }
     
     .message {
-        padding: 8px 12px;
         margin: 8px 0;
-        border-radius: 8px;
-        max-width: 70%;
+        max-width: 76%;
+        padding: 10px 14px;
+        border-radius: 14px;
+        font-size: 14px;
+        line-height: 1.45;
         word-wrap: break-word;
+        border: 1px solid rgba(255,255,255,0.08);
+        box-shadow: 0 6px 18px rgba(0,0,0,0.28);
     }
     
     .message.sent {
-        background: var(--gold);
-        color: white;
+        background: linear-gradient(180deg, rgba(54,39,7,0.95), rgba(38,29,8,0.95));
+        color: #fff;
         margin-left: auto;
-        border-bottom-right-radius: 0;
+        border: 1px solid rgba(212,160,22,0.9);
+        border-left: 4px solid var(--gold);
+        border-bottom-right-radius: 8px;
     }
     
     .message.received {
-        background: var(--bg-header);
-        color: var(--text);
+        background: linear-gradient(180deg, #25282d, #1f2227);
+        color: #f4f5f7;
         margin-right: auto;
-        border-bottom-left-radius: 0;
+        border-top-left-radius: 8px;
     }
     
     .reply-quote {
@@ -188,50 +211,51 @@ styleEl.innerHTML = `
     
     .voice-overlay {
         position: fixed;
-        bottom: 100px;
-        right: 20px;
-        background: rgba(0,0,0,0.85);
+        bottom: 88px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: linear-gradient(90deg, #23181a 0%, #1c1f26 35%, #22262f 100%);
         display: flex;
-        flex-direction: column;
         align-items: center;
-        justify-content: center;
+        gap: 14px;
         z-index: 1000;
-        padding: 12px 16px;
-        border-radius: 12px;
+        padding: 10px 20px 10px 10px;
+        border-radius: 999px;
         border: 2px solid var(--gold);
-        gap: 8px;
-        width: auto;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-        min-width: 120px;
+        box-shadow: 0 12px 30px rgba(0,0,0,0.55);
+        min-width: 320px;
     }
     
     .vocal-anim {
         position: relative;
-        width: 35px;
-        height: 35px;
+        width: 54px;
+        height: 54px;
         display: flex;
         align-items: center;
         justify-content: center;
+        border-radius: 50%;
+        background: radial-gradient(circle at 30% 30%, rgba(255, 77, 77, 0.28), rgba(255, 77, 77, 0.1));
+        box-shadow: 0 0 0 1px rgba(255, 77, 77, 0.25);
     }
     
     .vocal-anim i {
         font-size: 20px;
-        color: var(--gold);
+        color: #ff5252;
         z-index: 2;
     }
     
     .pulse-ring {
         position: absolute;
-        inset: 0;
-        border: 2px solid var(--gold);
+        inset: -2px;
+        border: 2px solid rgba(255, 82, 82, 0.65);
         border-radius: 50%;
-        animation: pulse 1.5s ease-out infinite;
+        animation: pulse 1.2s ease-out infinite;
     }
     
     @keyframes pulse {
         0% {
-            transform: scale(0.9);
-            opacity: 1;
+            transform: scale(0.92);
+            opacity: 0.95;
         }
         100% {
             transform: scale(1.5);
@@ -240,10 +264,11 @@ styleEl.innerHTML = `
     }
     
     #voiceTimer, #voiceTimerStudent {
-        color: var(--gold);
-        font-weight: bold;
-        font-size: 0.9em;
-        text-align: center;
+        color: #ff4b55;
+        font-weight: 700;
+        font-size: 20px;
+        letter-spacing: 0.5px;
+        font-family: 'Courier New', monospace;
     }
     
     .lightbox-overlay {
@@ -365,7 +390,7 @@ async function chargerGroupesStudent() {
             headers['Authorization'] = `Bearer ${token}`;
         }
 
-        const res = await fetch(`http://localhost:3000/api/student/groups`, {
+        const res = await fetch(`${API_URL}/student/groups`, {
             method: 'GET',
             headers: headers,
             credentials: 'include'
@@ -444,6 +469,10 @@ async function chargerGroupesStudent() {
                 // Afficher le groupe dans la liste des discussions
                 ouvriGroupeChat(group.id, group.name, group);
             };
+            groupCard.ontouchend = (e) => {
+                e.preventDefault();
+                ouvriGroupeChat(group.id, group.name, group);
+            };
 
             contactsGrid.appendChild(groupCard);
         });
@@ -475,7 +504,7 @@ async function chargerAssistantSocial() {
             headers['Authorization'] = `Bearer ${token}`;
         }
 
-        const res = await fetch(`http://localhost:3000/api/student/admin`, {
+        const res = await fetch(`${API_URL}/student/admin`, {
             method: 'GET',
             headers: headers,
             credentials: 'include'
@@ -544,6 +573,10 @@ async function chargerAssistantSocial() {
             // Ouvrir la conversation/message direct avec l'Assistant Social
             ouvrirConversationAssistantSocial(admin.id, "Assistant Social");
         };
+        adminCard.ontouchend = (e) => {
+            e.preventDefault();
+            ouvrirConversationAssistantSocial(admin.id, "Assistant Social");
+        };
 
         socialWorkerGrid.appendChild(adminCard);
         console.log(`✅ Assistant Social affiché`);
@@ -571,7 +604,7 @@ async function chargerConversationsStudent() {
             headers['Authorization'] = `Bearer ${token}`;
         }
 
-        await fetch(`http://localhost:3000/api/conversations`, {
+        await fetch(`${API_URL}/conversations`, {
             headers, credentials: 'include'
         });
         console.log("✅ Conversations pré-chargées");
@@ -628,7 +661,7 @@ async function chargerMessagesGroupe(groupId) {
             headers['Authorization'] = `Bearer ${token}`;
         }
 
-        const res = await fetch(`http://localhost:3000/api/student/groups/${groupId}/messages`, {
+        const res = await fetch(`${API_URL}/student/groups/${groupId}/messages`, {
             method: 'GET',
             headers: headers,
             credentials: 'include'
@@ -772,16 +805,16 @@ window.ouvrirConversationAssistantSocialMessages = (adminId, adminName) => {
                                 <i class="fas fa-volume-up" style="color:var(--gold); font-size:14px; flex-shrink:0;"></i>
                                 <audio src="${att}" controls style="height:24px; max-width:140px; cursor:pointer;"></audio>
                             </div>`;
-                        } else if (att.includes("image") || att.match(/\.(jpg|jpeg|png|gif)($|\?|\#)/i)) {
+                        } else if (getAttachmentType(att) === "image") {
                             lightboxMediaList.push({ url: att, type: 'image' });
                             const mediaIndex = lightboxMediaList.length - 1;
                             html += `<img src="${att}" style="max-width:200px; border-radius:8px; cursor:pointer; margin:5px 0;" onclick="window.ouvrirPleinEcran('${att}', 'image', ${mediaIndex})">`;
-                        } else if (att.includes("audio") || att.match(/\.(mp3|wav|ogg)($|\?|\#)/i)) {
+                        } else if (getAttachmentType(att) === "audio") {
                             html += `<div style="display:flex; align-items:center; gap:6px; padding:4px 6px; background:rgba(212,175,55,0.1); border-radius:6px; margin:3px 0;">
                                 <i class="fas fa-volume-up" style="color:var(--gold); font-size:14px; flex-shrink:0;"></i>
                                 <audio src="${att}" controls style="height:24px; max-width:140px; cursor:pointer;"></audio>
                             </div>`;
-                        } else if (att.includes("video") || att.match(/\.(mp4)($|\?|\#)/i)) {
+                        } else if (getAttachmentType(att) === "video") {
                             lightboxMediaList.push({ url: att, type: 'video' });
                             const mediaIndex = lightboxMediaList.length - 1;
                             html += `<video src="${att}" style="max-width:200px; border-radius:8px; cursor:pointer; margin:5px 0;" controls onclick="window.ouvrirPleinEcran('${att}', 'video', ${mediaIndex})"></video>`;
@@ -799,10 +832,7 @@ window.ouvrirConversationAssistantSocialMessages = (adminId, adminName) => {
                     minute: '2-digit' 
                 });
 
-                let readStatus = "";
-                if (isMe) {
-                    readStatus = `<span style="color:var(--gold); margin-left:4px; font-size:0.8em;">✓✓</span>`;
-                }
+                const readStatus = getReadStatusMarkup(msg, isMe);
                 div.innerHTML = `${html}<div style="font-size:0.7em; margin-top:4px; opacity:0.7; display:flex; align-items:center;">${time}${readStatus}</div>`;
 
                 container.appendChild(div);
@@ -1318,6 +1348,12 @@ function chargerConversations() {
                         window.ouvrirConversation(conv.id, displayName);
                     }
                 });
+                item.addEventListener('touchend', (e) => {
+                    if (!e.target.classList.contains('delete-conv-btn')) {
+                        e.preventDefault();
+                        window.ouvrirConversation(conv.id, displayName);
+                    }
+                }, { passive: false });
                 
                 // Bouton delete pour admin
                 const deleteBtn = item.querySelector('.delete-conv-btn');
@@ -1590,16 +1626,16 @@ window.ouvrirConversation = (conversationId, title = "Conversation") => {
                                 <i class="fas fa-volume-up" style="color:var(--gold); font-size:14px; flex-shrink:0;"></i>
                                 <audio src="${att}" controls style="height:24px; max-width:140px; cursor:pointer;"></audio>
                             </div>`;
-                        } else if (att.includes("image") || att.match(/\.(jpg|jpeg|png|gif)($|\?|\#)/i)) {
+                        } else if (getAttachmentType(att) === "image") {
                             lightboxMediaList.push({ url: att, type: 'image' });
                             const mediaIndex = lightboxMediaList.length - 1;
                             html += `<img src="${att}" style="max-width:200px; border-radius:8px; cursor:pointer; margin:5px 0;" onclick="window.ouvrirPleinEcran('${att}', 'image', ${mediaIndex})">`;
-                        } else if (att.includes("audio") || att.match(/\.(mp3|wav|ogg)($|\?|\#)/i)) {
+                        } else if (getAttachmentType(att) === "audio") {
                             html += `<div style="display:flex; align-items:center; gap:6px; padding:4px 6px; background:rgba(212,175,55,0.1); border-radius:6px; margin:3px 0;">
                                 <i class="fas fa-volume-up" style="color:var(--gold); font-size:14px; flex-shrink:0;"></i>
                                 <audio src="${att}" controls style="height:24px; max-width:140px; cursor:pointer;"></audio>
                             </div>`;
-                        } else if (att.includes("video") || att.match(/\.(mp4)($|\?|\#)/i)) {
+                        } else if (getAttachmentType(att) === "video") {
                             lightboxMediaList.push({ url: att, type: 'video' });
                             const mediaIndex = lightboxMediaList.length - 1;
                             html += `<video src="${att}" style="max-width:200px; border-radius:8px; cursor:pointer; margin:5px 0;" controls onclick="window.ouvrirPleinEcran('${att}', 'video', ${mediaIndex})"></video>`;
@@ -1617,13 +1653,8 @@ window.ouvrirConversation = (conversationId, title = "Conversation") => {
                     hour: '2-digit', 
                     minute: '2-digit' 
                 });
-
-                // ✅ Ajouter les checkmarks WhatsApp (confirmation de lecture)
-                let readStatus = "";
-                if (isMe) {
-                    readStatus = `<span style="color:var(--gold); margin-left:4px; font-size:0.8em;">✓✓</span>`; // Deux checkmarks (lu)
-                }
-                div.innerHTML = `${html}<div style="font-size:0.7em; margin-top:4px; opacity:0.7; display:flex; align-items:center;">${time}${readStatus}</div>`;
+                const readStatus = getReadStatusMarkup(msg, isMe);
+div.innerHTML = `${html}<div style="font-size:0.7em; margin-top:4px; opacity:0.7; display:flex; align-items:center;">${time}${readStatus}</div>`;
                 div.oncontextmenu = (e) => {
                     e.preventDefault();
                     showMessageContextMenu(e, msg.id, msg);
@@ -2172,7 +2203,9 @@ window.handleFileUpload = async (e) => {
         // Use resource_type: auto for documents, raw for any file type
         if (file.type.startsWith('image/')) {
             form.append("resource_type", "image");
-        } else if (file.type.startsWith('audio/') || file.type.startsWith('video/')) {
+        } else if (file.type.startsWith('audio/')) {
+            form.append("resource_type", "auto");
+        } else if (file.type.startsWith('video/')) {
             form.append("resource_type", "video");
         } else {
             // For documents and other files
@@ -2303,6 +2336,8 @@ const setupMicrophone = (micBtn) => {
                 const form = new FormData();
                 form.append("file", blob);
                 form.append("upload_preset", CL_PRESET);
+                form.append("resource_type", "auto");
+                form.append("folder", "voice_notes");
 
                 try {
                     const res = await fetch(CL_URL, { method: "POST", body: form });
@@ -2605,6 +2640,9 @@ function setupEventListeners() {
 window.onload = () => {
     console.log("🚀 window.onload called");
     setupEventListeners();
+    if (!currentUser && typeof initializeUser === "function") {
+        initializeUser().catch(err => console.error("❌ initializeUser onload:", err));
+    }
 };
 
 // ============================================================
@@ -3597,16 +3635,16 @@ window.ouvrirGroupe = (groupId, groupName) => {
                 
                 if (msg.attachments && msg.attachments.length > 0) {
                     msg.attachments.forEach(att => {
-                        if (att.includes("image") || att.match(/\.(jpg|jpeg|png|gif)$/i)) {
+                        if (getAttachmentType(att) === "image") {
                             lightboxMediaList.push({ url: att, type: 'image' });
                             const mediaIndex = lightboxMediaList.length - 1;
                             html += `<img src="${att}" style="max-width:200px; border-radius:8px; cursor:pointer; margin:5px 0;" onclick="window.ouvrirPleinEcran('${att}', 'image', ${mediaIndex})">`;
-                        } else if (att.includes("audio") || att.match(/\.(mp3|wav|ogg|webm)$/i)) {
+                        } else if (getAttachmentType(att) === "audio") {
                             html += `<div style="display:flex; align-items:center; gap:6px; padding:4px 6px; background:rgba(212,175,55,0.1); border-radius:6px; margin:3px 0;">
                                 <i class="fas fa-volume-up" style="color:var(--gold); font-size:14px; flex-shrink:0;"></i>
                                 <audio src="${att}" controls style="height:24px; max-width:140px; cursor:pointer;"></audio>
                             </div>`;
-                        } else if (att.includes("video") || att.match(/\.(mp4)$/i)) {
+                        } else if (getAttachmentType(att) === "video") {
                             lightboxMediaList.push({ url: att, type: 'video' });
                             const mediaIndex = lightboxMediaList.length - 1;
                             html += `<video src="${att}" style="max-width:200px; border-radius:8px; cursor:pointer; margin:5px 0;" controls onclick="window.ouvrirPleinEcran('${att}', 'video', ${mediaIndex})"></video>`;
@@ -3624,13 +3662,8 @@ window.ouvrirGroupe = (groupId, groupName) => {
                     hour: '2-digit', 
                     minute: '2-digit' 
                 });
-
-                // ✅ Ajouter les checkmarks WhatsApp (confirmation de lecture)
-                let readStatus = "";
-                if (isMe) {
-                    readStatus = `<span style="color:var(--gold); margin-left:4px; font-size:0.8em;">✓✓</span>`; // Deux checkmarks (lu)
-                }
-                div.innerHTML = `${html}<div style="font-size:0.7em; margin-top:4px; opacity:0.7; display:flex; align-items:center;">${time}${readStatus}</div>`;
+                const readStatus = getReadStatusMarkup(msg, isMe);
+div.innerHTML = `${html}<div style="font-size:0.7em; margin-top:4px; opacity:0.7; display:flex; align-items:center;">${time}${readStatus}</div>`;
 
                 container.appendChild(div);
             });
@@ -3768,16 +3801,16 @@ window.ouvrirDiffusion = (broadcastId, broadcastName) => {
                 
                 if (msg.attachments && msg.attachments.length > 0) {
                     msg.attachments.forEach(att => {
-                        if (att.includes("image") || att.match(/\.(jpg|jpeg|png|gif)$/i)) {
+                        if (getAttachmentType(att) === "image") {
                             lightboxMediaList.push({ url: att, type: 'image' });
                             const mediaIndex = lightboxMediaList.length - 1;
                             html += `<img src="${att}" style="max-width:200px; border-radius:8px; cursor:pointer; margin:5px 0;" onclick="window.ouvrirPleinEcran('${att}', 'image', ${mediaIndex})">`;
-                        } else if (att.includes("audio") || att.match(/\.(mp3|wav|ogg|webm)$/i)) {
+                        } else if (getAttachmentType(att) === "audio") {
                             html += `<div style="display:flex; align-items:center; gap:6px; padding:4px 6px; background:rgba(212,175,55,0.1); border-radius:6px; margin:3px 0;">
                                 <i class="fas fa-volume-up" style="color:var(--gold); font-size:14px; flex-shrink:0;"></i>
                                 <audio src="${att}" controls style="height:24px; max-width:140px; cursor:pointer;"></audio>
                             </div>`;
-                        } else if (att.includes("video") || att.match(/\.(mp4)$/i)) {
+                        } else if (getAttachmentType(att) === "video") {
                             lightboxMediaList.push({ url: att, type: 'video' });
                             const mediaIndex = lightboxMediaList.length - 1;
                             html += `<video src="${att}" style="max-width:200px; border-radius:8px; cursor:pointer; margin:5px 0;" controls onclick="window.ouvrirPleinEcran('${att}', 'video', ${mediaIndex})"></video>`;
@@ -3795,13 +3828,8 @@ window.ouvrirDiffusion = (broadcastId, broadcastName) => {
                     hour: '2-digit', 
                     minute: '2-digit' 
                 });
-
-                // ✅ Ajouter les checkmarks WhatsApp (confirmation de lecture)
-                let readStatus = "";
-                if (isMe) {
-                    readStatus = `<span style="color:var(--gold); margin-left:4px; font-size:0.8em;">✓✓</span>`; // Deux checkmarks (lu)
-                }
-                div.innerHTML = `${html}<div style="font-size:0.7em; margin-top:4px; opacity:0.7; display:flex; align-items:center;">${time}${readStatus}</div>`;
+                const readStatus = getReadStatusMarkup(msg, isMe);
+div.innerHTML = `${html}<div style="font-size:0.7em; margin-top:4px; opacity:0.7; display:flex; align-items:center;">${time}${readStatus}</div>`;
 
                 container.appendChild(div);
             });
@@ -3825,4 +3853,6 @@ window.ouvrirDiffusion = (broadcastId, broadcastName) => {
         loadMessages();
     }, 10000);
 };
+
+
 

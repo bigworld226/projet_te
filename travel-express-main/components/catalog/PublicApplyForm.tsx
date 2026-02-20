@@ -25,6 +25,9 @@ export default function PublicApplyForm({ countryName }: { countryName: string }
         setError(result.error);
       } else {
         setSuccess(true);
+        setTimeout(() => {
+          window.location.href = "/student";
+        }, 700);
       }
     } catch (e: any) {
       setError("Une erreur réseau est survenue.");

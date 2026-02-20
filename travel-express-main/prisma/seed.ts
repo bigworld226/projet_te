@@ -9,12 +9,16 @@ async function main() {
   // --- CONFIGURATION DES MOTS DE PASSE ---
   // On définit les mots de passe en clair ici pour les voir dans la console
   const PWD_ADMIN = 'admin123'
-  const PWD_STAFF = 'staff123'
+  const PWD_QUALITY = 'staff123'
+  const PWD_STUDENT_MANAGER = 'student_manager'
+  const PWD_SECRETARY = 'secretaire'
   const PWD_STUDENT = 'student123'
 
   const salt = bcrypt.genSaltSync(10)
   const hashAdmin = bcrypt.hashSync(PWD_ADMIN, salt)
-  const hashStaff = bcrypt.hashSync(PWD_STAFF, salt)
+  const hashQuality = bcrypt.hashSync(PWD_QUALITY, salt)
+  const hashStudentManager = bcrypt.hashSync(PWD_STUDENT_MANAGER, salt)
+  const hashSecretary = bcrypt.hashSync(PWD_SECRETARY, salt)
   const hashStudent = bcrypt.hashSync(PWD_STUDENT, salt)
 
   // 1. Création des Rôles (IAM)
@@ -65,10 +69,10 @@ async function main() {
   // QUALITY OFFICER
   await prisma.user.upsert({
     where: { email: 'qualite@agence.com' },
-    update: { password: hashStaff },
+    update: { password: hashQuality },
     create: {
       email: 'qualite@agence.com',
-      password: hashStaff,
+      password: hashQuality,
       fullName: 'Agent Qualité',
       roleId: createdRoles['QUALITY_OFFICER'],
     },
@@ -77,10 +81,10 @@ async function main() {
   // STUDENT_MANAGER
   await prisma.user.upsert({
     where: { email: 'student_manager@gmail.com' },
-    update: { password: hashStaff },
+    update: { password: hashStudentManager },
     create: {
       email: 'student_manager@gmail.com',
-      password: hashStaff,
+      password: hashStudentManager,
       fullName: 'Student Manager',
       roleId: createdRoles['STUDENT_MANAGER'],
     },
@@ -89,10 +93,10 @@ async function main() {
   // SECRETARY
   await prisma.user.upsert({
     where: { email: 'secretaire@gmail.com' },
-    update: { password: hashStaff },
+    update: { password: hashSecretary },
     create: {
       email: 'secretaire@gmail.com',
-      password: hashStaff,
+      password: hashSecretary,
       fullName: 'Secrétaire',
       roleId: createdRoles['SECRETARY'],
     },
@@ -137,7 +141,9 @@ async function main() {
   
   console.table([
     { Rôle: 'SuperAdmin', Email: 'admin@agence.com', Password: PWD_ADMIN },
-    { Rôle: 'Qualité', Email: 'qualite@agence.com', Password: PWD_STAFF },
+    { Rôle: 'Student Manager', Email: 'student_manager@gmail.com', Password: PWD_STUDENT_MANAGER },
+    { Rôle: 'Secrétaire', Email: 'secretaire@gmail.com', Password: PWD_SECRETARY },
+    { Rôle: 'Qualité', Email: 'qualite@agence.com', Password: PWD_QUALITY },
     { Rôle: 'Étudiant', Email: 'etudiant@test.com', Password: PWD_STUDENT },
   ])
   console.log('='.repeat(50) + '\n')

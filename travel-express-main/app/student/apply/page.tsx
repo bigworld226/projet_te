@@ -2,6 +2,7 @@
 
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button"; 
 import { Plane, ShieldPlus, FileText, User, Plus, Trash2, Loader2 } from "lucide-react";
 import { createApplicationAction } from "@/actions/application.actions";
@@ -10,6 +11,7 @@ import { Suspense } from "react";
 
  function ApplyPage() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const country = searchParams.get("country") || "Chine";
   
   const [isPending, setIsPending] = useState(false);
@@ -47,6 +49,8 @@ import { Suspense } from "react";
         toast.error(result.error);
       } else {
         toast.success("Candidature envoyée avec succès !");
+        router.push("/student");
+        router.refresh();
       }
     } catch (error) {
       toast.error("Une erreur est survenue lors de l'envoi");

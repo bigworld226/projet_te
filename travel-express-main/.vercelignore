@@ -1,0 +1,16 @@
+dist
+dist_new
+electron
+android
+_backup_vite
+volume
+docs
+NEXT_STEPS.md
+check-data.js
+fix-permissions.js
+docker-compose.yml
+*.exe
+*.blockmap
+*.apk
+*.aab
+prisma-log.txt

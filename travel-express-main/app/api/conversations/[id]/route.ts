@@ -10,10 +10,10 @@ export async function OPTIONS() {
 // DELETE: Supprimer une conversation
 export async function DELETE(
     req: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const conversationId = (await Promise.resolve(params)).id;
+        const { id: conversationId } = await params;
 
         // Vérifier le JWT token
         const authHeader = req.headers.get("authorization");

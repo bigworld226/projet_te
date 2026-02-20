@@ -6,7 +6,7 @@ import { logoutAction } from "@/actions/logout.action";
 import { useRouter } from "next/navigation";
 import { User, LogOut, FileText, Globe, MessageCircle, Settings } from "lucide-react";
 import { cn } from "@/lib/utils"; 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 interface NavbarProps {
   isConnected: boolean;
@@ -17,11 +17,29 @@ interface NavbarProps {
 const Navbar = ({ isConnected, userRole, userName }: NavbarProps) => {
   const router = useRouter();
   const [showMenu, setShowMenu] = useState(false);
+  const [studentNotifCount, setStudentNotifCount] = useState(0);
+
+  const clearClientSessionData = async () => {
+    localStorage.removeItem("travelExpressUser");
+    localStorage.removeItem("travelExpressToken");
+    localStorage.removeItem("authToken");
+    sessionStorage.clear();
+
+    if ("caches" in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map((k) => caches.delete(k)));
+    }
+
+    if ("serviceWorker" in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map((r) => r.unregister()));
+    }
+  };
 
   const handleLogout = async () => {
     try {
       await logoutAction();
-      localStorage.removeItem("travelExpressUser");
+      await clearClientSessionData();
       router.push("/login");
       router.refresh();
     } catch (error) {
@@ -39,6 +57,29 @@ const Navbar = ({ isConnected, userRole, userName }: NavbarProps) => {
 
   // Condition : si c'est un admin, on cache la navbar
   const isAdmin = !!userRole && userRole !== "STUDENT";
+
+  useEffect(() => {
+    if (!isConnected || isAdmin) return;
+
+    let mounted = true;
+
+    const pollNotifications = async () => {
+      try {
+        const res = await fetch("/api/notifications/summary", { credentials: "include" });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!mounted) return;
+        setStudentNotifCount(Number(data?.total || 0));
+      } catch {}
+    };
+
+    pollNotifications();
+    const id = setInterval(pollNotifications, 12000);
+    return () => {
+      mounted = false;
+      clearInterval(id);
+    };
+  }, [isConnected, isAdmin]);
 
   return (
     <header
@@ -103,10 +144,15 @@ const Navbar = ({ isConnected, userRole, userName }: NavbarProps) => {
               {/* ✅ ICÔNE DISCUSSION - Clique pour aller aux discussions */}
               <button
                 onClick={openMessaging}
-                className="p-2 text-slate-400 hover:text-[#db9b16] transition-colors"
+                className="p-2 text-slate-400 hover:text-[#db9b16] transition-colors relative"
                 title="Discussions"
               >
                 <MessageCircle size={18} />
+                {studentNotifCount > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-red-500 text-white text-[11px] font-bold flex items-center justify-center">
+                    {studentNotifCount > 99 ? "99+" : studentNotifCount}
+                  </span>
+                )}
               </button>
 
               <div className="w-px h-4 bg-slate-200 mx-1" />

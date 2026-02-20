@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-export async function GET(req: NextRequest, { params }: { params: { userId: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ userId: string }> }) {
     try {
+        const { userId } = await params;
         const applications = await prisma.application.findMany({
-            where: { userId: params.userId },
+            where: { userId },
             include: { documents: true }
         });
 

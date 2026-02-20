@@ -11,9 +11,31 @@ declare global {
 
 export default function MessagingPage() {
   useEffect(() => {
+    const clearClientCachesOnce = async () => {
+      try {
+        if (sessionStorage.getItem("messaging_cache_cleared") === "1") return;
+
+        if ("caches" in window) {
+          const keys = await caches.keys();
+          await Promise.all(keys.map((k) => caches.delete(k)));
+        }
+
+        if ("serviceWorker" in navigator) {
+          const regs = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(regs.map((r) => r.unregister()));
+        }
+
+        sessionStorage.setItem("messaging_cache_cleared", "1");
+      } catch (err) {
+        console.warn("⚠️ Impossible de vider le cache client:", err);
+      }
+    };
+
     // Première étape: charger l'utilisateur courant pour déterminer le rôle
     const loadAndInitialize = async () => {
       try {
+        await clearClientCachesOnce();
+
         // Récupérer l'utilisateur courant pour connaître son rôle
         const userResponse = await fetch('/api/user/current');
         let userRole = 'STUDENT'; // défaut
@@ -102,6 +124,13 @@ export default function MessagingPage() {
           <div className="sidebar" id="sidebar">
             <header className="header-left">
               <div className="header-actions">
+                <button
+                  className="icon-btn"
+                  onClick={() => { window.location.href = '/admin/dashboard'; }}
+                  title="Retour au Dashboard"
+                >
+                  <i className="fas fa-arrow-left"></i>
+                </button>
                 <button
                   className="icon-btn"
                   onClick={() => (window as any).ouvrirConfig?.('groupe')}

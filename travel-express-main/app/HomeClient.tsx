@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Globe, ShieldCheck, Zap, ArrowRight, Star, GraduationCap, Compass } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import Navbar from "@/components/Navbar";
@@ -35,8 +36,9 @@ const COUNTRIES = [
   }
 ];
 
-export default function HomeClient({ isConnected }: { isConnected: boolean }) {
+export default function HomeClient({ isConnected, isAdmin }: { isConnected: boolean; isAdmin?: boolean }) {
   const blobRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
 
   useEffect(() => {
     const handleMove = (e: MouseEvent) => {
@@ -52,8 +54,49 @@ export default function HomeClient({ isConnected }: { isConnected: boolean }) {
     return () => window.removeEventListener('mousemove', handleMove);
   }, []);
 
+  useEffect(() => {
+    const redirectAdminFromClient = async () => {
+      try {
+        if (isAdmin) {
+          router.replace("/admin/dashboard");
+          return;
+        }
+
+        const rawToken = localStorage.getItem("travelExpressToken") || localStorage.getItem("authToken");
+        if (!rawToken) return;
+        const token = rawToken.startsWith("Bearer ") ? rawToken.slice(7) : rawToken;
+        if (!token) return;
+
+        const res = await fetch("/api/auth/me", {
+          method: "GET",
+          headers: { Authorization: `Bearer ${token}` },
+          credentials: "include",
+        });
+
+        if (!res.ok) return;
+        const me = await res.json();
+        const roleName = me?.role?.name || me?.role;
+        if (roleName && roleName !== "STUDENT") {
+          router.replace("/admin/dashboard");
+        }
+      } catch {
+        // no-op: on laisse la home s'afficher si la vérification échoue
+      }
+    };
+
+    redirectAdminFromClient();
+  }, [isAdmin, router]);
+
   return (
     <div className="min-h-screen bg-white font-sans selection:bg-[#db9b16]/30">
+      <div className="fixed top-12 left-4 z-[100]">
+        <Link href="/admin/dashboard">
+          <Button className="rounded-full px-5 bg-slate-900 hover:bg-[#db9b16] text-white font-bold border-2 border-[#db9b16]">
+            ← Dashboard
+          </Button>
+        </Link>
+      </div>
+
       {/* 🌌 HERO SECTION AVEC BLOB INTERACTIF */}
       <section className="relative min-h-[90vh] flex flex-col items-center justify-center pt-20 overflow-hidden">
         <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_50%_50%,_rgba(219,155,22,0.05)_0%,_rgba(255,255,255,1)_100%)]" />

@@ -1,8 +1,8 @@
 
 'use client';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { LayoutGrid, Users, FileText, Globe, LogOut, ChevronLeft, ChevronRight, Menu, MessageSquare, Settings } from "lucide-react";
 import { logoutAction } from "@/actions/logout.action";
 import { cn } from "@/lib/utils";
@@ -19,8 +19,40 @@ const MENU_ITEMS = [
 
 export default function AdminSidebar({ user }: { user: any }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isOpenMobile, setIsOpenMobile] = useState(false);
+  const [adminNotifCount, setAdminNotifCount] = useState(0);
+  const prevNotifCountRef = useRef(0);
+  const notifAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  const clearClientSessionData = async () => {
+    localStorage.removeItem("travelExpressUser");
+    localStorage.removeItem("travelExpressToken");
+    localStorage.removeItem("authToken");
+    sessionStorage.clear();
+
+    if ("caches" in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map((k) => caches.delete(k)));
+    }
+
+    if ("serviceWorker" in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map((r) => r.unregister()));
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logoutAction();
+      await clearClientSessionData();
+      router.push("/login");
+      router.refresh();
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
+  };
 
   // Filtrer les éléments de menu en fonction du rôle
   const filteredMenuItems = MENU_ITEMS.filter(item => {
@@ -32,6 +64,57 @@ export default function AdminSidebar({ user }: { user: any }) {
     }
     return true;
   });
+
+  useEffect(() => {
+    notifAudioRef.current = new Audio("https://assets.mixkit.co/active_storage/sfx/2357/2357-preview.mp3");
+    notifAudioRef.current.volume = 0.5;
+  }, []);
+
+  useEffect(() => {
+    if (!user?.role?.name || !["SUPERADMIN", "QUALITY_OFFICER", "SECRETARY", "STUDENT_MANAGER"].includes(user.role.name)) {
+      return;
+    }
+
+    let mounted = true;
+
+    const pollNotifications = async () => {
+      try {
+        const res = await fetch("/api/notifications/summary", { credentials: "include" });
+        if (!res.ok) return;
+        const data = await res.json();
+        const total = Number(data?.total || 0);
+
+        if (!mounted) return;
+        setAdminNotifCount(total);
+
+        if (total > prevNotifCountRef.current) {
+          try {
+            await notifAudioRef.current?.play();
+          } catch {}
+
+          if ("Notification" in window) {
+            if (Notification.permission === "default") {
+              await Notification.requestPermission();
+            }
+            if (Notification.permission === "granted") {
+              new Notification("Travel Express", {
+                body: "Nouvelles notifications admin (messages/dossiers).",
+              });
+            }
+          }
+        }
+
+        prevNotifCountRef.current = total;
+      } catch {}
+    };
+
+    pollNotifications();
+    const id = setInterval(pollNotifications, 12000);
+    return () => {
+      mounted = false;
+      clearInterval(id);
+    };
+  }, [user?.role?.name]);
 
   return (
     <>
@@ -112,6 +195,14 @@ export default function AdminSidebar({ user }: { user: any }) {
                   )}>
                     {item.label}
                   </span>
+                  {item.label === "Messagerie" && adminNotifCount > 0 && (
+                    <span className={cn(
+                      "ml-auto min-w-5 h-5 px-1 rounded-full bg-red-500 text-white text-[11px] font-bold flex items-center justify-center",
+                      isCollapsed && "absolute -top-1 -right-1 ml-0"
+                    )}>
+                      {adminNotifCount > 99 ? "99+" : adminNotifCount}
+                    </span>
+                  )}
                   {isActive && !isCollapsed && <div className="absolute right-0 h-6 w-1 bg-blue-600 rounded-l-full top-1/2 -translate-y-1/2"></div>}
                   {isActive && isCollapsed && <div className="absolute inset-0 bg-blue-100/20 rounded-xl -z-10"></div>}
                 </Link>
@@ -121,24 +212,23 @@ export default function AdminSidebar({ user }: { user: any }) {
 
           {/* LOGOUT */} 
           <div className="pt-4 border-t border-slate-100 mt-auto"> 
-            <form action={logoutAction}> 
-              <button 
-                type="submit" 
-                className={cn( 
-                  "w-full flex items-center gap-4 py-3 rounded-xl cursor-pointer transition-colors font-bold text-sm text-red-500 hover:bg-red-50",
-                  isCollapsed ? "justify-center px-0" : "px-4"
-                )} 
-                title="Se déconnecter" 
-              > 
-                <LogOut size={20} className="shrink-0"/> 
-                <span className={cn( 
-                  "whitespace-nowrap transition-all duration-300",
-                  isCollapsed ? "w-0 opacity-0 hidden" : "w-auto opacity-100"
-                )}> 
-                  Déconnexion 
-                </span> 
-              </button> 
-            </form> 
+            <button
+              type="button"
+              onClick={handleLogout}
+              className={cn(
+                "w-full flex items-center gap-4 py-3 rounded-xl cursor-pointer transition-colors font-bold text-sm text-red-500 hover:bg-red-50",
+                isCollapsed ? "justify-center px-0" : "px-4"
+              )}
+              title="Se déconnecter"
+            >
+              <LogOut size={20} className="shrink-0"/>
+              <span className={cn(
+                "whitespace-nowrap transition-all duration-300",
+                isCollapsed ? "w-0 opacity-0 hidden" : "w-auto opacity-100"
+              )}>
+                Déconnexion
+              </span>
+            </button>
           </div> 
         </div> 
       </aside> 

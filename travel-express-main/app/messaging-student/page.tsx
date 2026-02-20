@@ -85,6 +85,13 @@ export default function MessagingStudentPage() {
           <div className="sidebar" id="sidebarStudent">
             <header className="header-left">
               <div className="header-actions">
+                <button
+                  className="icon-btn"
+                  onClick={() => { window.location.href = '/student/dashboard'; }}
+                  title="Retour au Dashboard"
+                >
+                  <i className="fas fa-arrow-left"></i>
+                </button>
                 <select
                   id="themeSelectorStudent"
                   className="theme-select"

@@ -36,7 +36,11 @@ export function ApplyButton({ countryName, isConnected, className, children }: A
         
         if (result?.error) {
           toast.error(result.error);
+          return;
         }
+
+        toast.success("Candidature envoyée avec succès !");
+        window.location.href = "/student";
       } catch (err) {
         toast.error("Erreur lors de la création du dossier.");
       }

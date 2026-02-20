@@ -72,7 +72,7 @@ body {
 #mainChat, #mainChatStudent {
     display: flex;
     flex-direction: column;
-    height: 100vh;
+    height: 100dvh;
     width: 100%;
     overflow: hidden;
     overflow: hidden;
@@ -103,6 +103,12 @@ body {
     }
     .footer-chat {
         left: 0;
+        position: sticky;
+        bottom: 0;
+        padding-bottom: calc(14px + env(safe-area-inset-bottom));
+    }
+    .messages-container {
+        padding-bottom: calc(88px + env(safe-area-inset-bottom));
     }
 }
 
@@ -180,10 +186,32 @@ body {
     background-color: var(--bg-main); 
     min-height: 0;
 }
-.message { max-width: 80%; padding: 8px 12px; border-radius: 12px; font-size: 13px; position: relative; border: 1px solid var(--border); transition: 0.2s; color: var(--text-p); }
-.sent { align-self: flex-end; background: var(--bubble-sent); border-top-right-radius: 0; border-left: 4px solid var(--gold); }
-.received { align-self: flex-start; background: var(--bubble-recv); border-top-left-radius: 0; }
-.status-meta { font-size: 10px; color: var(--text-s); text-align: right; margin-top: 5px; }
+.message {
+    max-width: 76%;
+    padding: 10px 14px;
+    border-radius: 14px;
+    font-size: 14px;
+    line-height: 1.45;
+    position: relative;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    transition: 0.2s;
+    color: var(--text-p);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28);
+}
+.sent {
+    align-self: flex-end;
+    background: linear-gradient(180deg, rgba(54, 39, 7, 0.95), rgba(38, 29, 8, 0.95));
+    border: 1px solid rgba(212, 160, 22, 0.9);
+    border-left: 4px solid var(--gold);
+    border-top-right-radius: 8px;
+}
+.received {
+    align-self: flex-start;
+    background: linear-gradient(180deg, #25282d, #1f2227);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-top-left-radius: 8px;
+}
+.status-meta { font-size: 10px; color: #8b9098; text-align: right; margin-top: 6px; }
 
 /* TAG / REPLY */
 .reply-quote { 
@@ -233,17 +261,53 @@ body {
 .wa-context-menu li.danger:hover { background: #ff4b4b; color: white; }
 
 /* ANIMATION VOCALE */
-.voice-overlay { 
-    position: absolute; bottom: 70px; left: 50%; transform: translateX(-50%); 
-    background: var(--bg-header); padding: 20px 40px; border-radius: 50px; 
-    display: flex; align-items: center; gap: 20px; 
-    box-shadow: 0 10px 40px rgba(0,0,0,0.6); 
-    border: 2px solid var(--gold); z-index: 999; 
+.voice-overlay {
+    position: absolute;
+    bottom: 72px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(90deg, #23181a 0%, #1c1f26 35%, #22262f 100%);
+    border: 2px solid var(--gold);
+    border-radius: 999px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 20px 10px 10px;
+    min-width: 320px;
+    z-index: 999;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.55);
 }
-.vocal-anim { position: relative; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; color: #ff4b4b; font-size: 20px; }
-.pulse-ring { position: absolute; width: 100%; height: 100%; background: #ff4b4b; border-radius: 50%; animation: pulse 1.5s infinite; opacity: 0.5; }
-@keyframes pulse { 0% { transform: scale(1); opacity: 0.5; } 100% { transform: scale(2.8); opacity: 0; } }
-#voiceTimer { font-weight: bold; color: #ff4b4b; font-family: 'Courier New', monospace; font-size: 18px; }
+.vocal-anim {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, rgba(255, 77, 77, 0.28), rgba(255, 77, 77, 0.1));
+    color: #ff5252;
+    font-size: 20px;
+    box-shadow: 0 0 0 1px rgba(255, 77, 77, 0.25);
+}
+.pulse-ring {
+    position: absolute;
+    inset: -2px;
+    border: 2px solid rgba(255, 82, 82, 0.65);
+    border-radius: 50%;
+    animation: pulse 1.2s ease-out infinite;
+}
+@keyframes pulse {
+    0% { transform: scale(0.92); opacity: 0.95; }
+    100% { transform: scale(1.5); opacity: 0; }
+}
+#voiceTimer, #voiceTimerStudent {
+    font-weight: 700;
+    color: #ff4b55;
+    font-family: 'Courier New', monospace;
+    font-size: 20px;
+    letter-spacing: 0.5px;
+}
 
 /* CONFIG PANEL */
 .config-panel { position: absolute; inset: 0; background: rgba(0,0,0,0.85); z-index: 1000; display: flex; align-items: center; justify-content: center; }
@@ -268,12 +332,12 @@ body {
     align-items: center; 
     gap: 10px; 
     border-top: 1px solid var(--border); 
-    padding-bottom: max(8px, env(safe-area-inset-bottom));
+    padding-bottom: calc(10px + env(safe-area-inset-bottom));
     position: relative;
     z-index: 50;
 }
 .message-input-wrapper { flex: 1; background: var(--bg-input); border-radius: 30px; padding: 4px 15px; border: 1px solid var(--border); }
-.message-input-wrapper input { width: 100%; height: 36px; background: transparent; border: none; color: var(--text-p); outline: none; font-size: 13px; }
+.message-input-wrapper input { width: 100%; height: 36px; background: transparent; border: none; color: var(--text-p); outline: none; font-size: 16px; }
 
 /* TABS ADMIN */
 .admin-nav { padding: 10px 15px; background: var(--bg-side); border-bottom: 1px solid var(--border); flex-shrink: 0; }

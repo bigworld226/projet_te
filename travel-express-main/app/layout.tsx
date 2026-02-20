@@ -4,6 +4,7 @@ import "./globals.css";
 import ReactQueryProvider from "./ReactQueryProvider";
 import Navbar from "@/components/Navbar";
 import { UserInitializer } from "@/components/UserInitializer";
+import AppToaster from "@/components/AppToaster";
 import { prisma } from "@/lib/prisma"; // Assure-toi d'avoir cet import
 import { authService } from "@/services/auth.service";
 const geistSans = Geist({
@@ -65,6 +66,7 @@ console.log('userdata',userData,"userid",userId)
           <main className={isAdmin ? "" : "pt-20"}> {/* Ajout d'un padding pour compenser la Navbar fixed */}
             {children}
           </main>
+          <AppToaster />
         </ReactQueryProvider>
       </body>
     </html>

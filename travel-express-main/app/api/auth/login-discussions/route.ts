@@ -49,8 +49,8 @@ export async function GET(req: NextRequest) {
                 user = {
                     id: dbUser.id,
                     email: dbUser.email,
-                    fullName: dbUser.fullName,
-                    profileImage: dbUser.profileImage,
+                    fullName: dbUser.fullName ?? dbUser.email,
+                    profileImage: dbUser.profileImage ?? undefined,
                     role: {
                         name: dbUser.role.name
                     }

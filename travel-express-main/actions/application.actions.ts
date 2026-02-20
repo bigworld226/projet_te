@@ -5,7 +5,6 @@ import { applicationService } from "@/services/application.service";
 import { authService } from "@/services/auth.service";
 import { requireAdminAction } from "@/lib/permissions";
 import { ApplicationStatus } from "@prisma/client";
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
 /**
@@ -33,7 +32,7 @@ export async function createApplicationAction(formData: FormData) {
     if (diseases.length > 0) {
       const cleanDiseases = diseases.filter(d => d.trim() !== '');
       if (cleanDiseases.length > 0) {
-        profileUpdate.specificDiseases = cleanDiseases.join(', ');
+        profileUpdate.specificDiseases = cleanDiseases;
       }
     }
 
@@ -44,9 +43,10 @@ export async function createApplicationAction(formData: FormData) {
       });
     }
 
-    await applicationService.createApplication(userId, country);
+    const created = await applicationService.createApplication(userId, country);
     revalidatePath('/student/dashboard');
-    redirect('/student/dashboard');
+    revalidatePath('/student');
+    return { success: true, applicationId: created?.id ?? null };
   } catch (error) {
     if (error instanceof Error && error.message.includes('NEXT_REDIRECT')) {
       throw error;

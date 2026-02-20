@@ -8,9 +8,9 @@ export async function OPTIONS() {
 }
 
 // GET: Messages d'une conversation
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
-        const conversationId = (await Promise.resolve(params)).id;
+        const { id: conversationId } = await params;
 
         // Vérifier le JWT token
         const authHeader = req.headers.get("authorization");
@@ -90,9 +90,9 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 }
 
 // POST: Envoyer un message
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
-        const conversationId = (await Promise.resolve(params)).id;
+        const { id: conversationId } = await params;
 
         // Vérifier le JWT token
         const authHeader = req.headers.get("authorization");
