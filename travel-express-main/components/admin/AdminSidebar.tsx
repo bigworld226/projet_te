@@ -54,13 +54,15 @@ export default function AdminSidebar({ user }: { user: any }) {
     }
   };
 
+  const roleName = user?.role?.name;
+
   // Filtrer les éléments de menu en fonction du rôle
-  const filteredMenuItems = MENU_ITEMS.filter(item => {
-    if (item.label === 'Messagerie') {
-      // Afficher Messagerie pour tous les rôles admin sauf STUDENT
-      // (SUPERADMIN, SECRETARY, QUALITY_OFFICER, STUDENT_MANAGER)
-      const allowedRoles = ['SUPERADMIN', 'SECRETARY', 'QUALITY_OFFICER', 'STUDENT_MANAGER'];
-      return allowedRoles.includes(user?.role?.name);
+  const filteredMenuItems = MENU_ITEMS.filter((item) => {
+    if (roleName === "STUDENT_MANAGER") {
+      return item.label === "Messagerie";
+    }
+    if (["SECRETARY", "QUALITY_OFFICER"].includes(roleName) && item.label === "Messagerie") {
+      return false;
     }
     return true;
   });

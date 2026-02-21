@@ -50,7 +50,7 @@ const Navbar = ({ isConnected, userRole, userName }: NavbarProps) => {
   // ✅ Ouvrir discussions sur /messaging-admin ou /messaging-student selon le rôle
   const openMessaging = () => {
     if (!isConnected) return;
-    const isAdmin = ["SUPERADMIN", "QUALITY_OFFICER", "SECRETARY", "STUDENT_MANAGER"].includes(userRole || "");
+    const isAdmin = ["SUPERADMIN", "STUDENT_MANAGER"].includes(userRole || "");
     const messagingRoute = isAdmin ? "/messaging-admin" : "/messaging-student";
     router.push(messagingRoute);
   };

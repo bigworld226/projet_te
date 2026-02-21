@@ -1113,7 +1113,7 @@ async function initializeUser() {
         console.log("🔑 Token trouvé:", token && token !== "COOKIES_AUTO" ? "OUI ✅" : "NON ❌ (utilisant cookies)");
 
         // Déterminer si ADMIN ou STUDENT
-        window.isAdminUser = ["SUPERADMIN", "QUALITY_OFFICER", "SECRETARY", "STUDENT_MANAGER"].includes(currentUser.role?.name);
+        window.isAdminUser = ["SUPERADMIN", "STUDENT_MANAGER"].includes(currentUser.role?.name);
         
         // ✅ IMPORTANT: Mettre à jour la variable globale qui sera utilisée dans switchTab
         isAdminUser = window.isAdminUser;
@@ -2324,16 +2324,20 @@ window.handleFileUpload = async (e) => {
 // ============================================================
 // MICROPHONE / VOICE MESSAGE
 // ============================================================
-window.onmouseup = () => {
+const stopRecordingIfNeeded = () => {
     if (mediaRecorder?.state === "recording") {
         mediaRecorder.stop();
     }
 };
 
+window.onmouseup = stopRecordingIfNeeded;
+window.ontouchend = stopRecordingIfNeeded;
+window.onpointerup = stopRecordingIfNeeded;
+
 const setupMicrophone = (micBtn) => {
     if (!micBtn) return;
     
-    micBtn.onmousedown = async () => {
+    const startRecording = async () => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             mediaRecorder = new MediaRecorder(stream);
@@ -2447,8 +2451,19 @@ const setupMicrophone = (micBtn) => {
             
             mediaRecorder.start();
         } catch (e) {
-            alert("Microphone inaccessible.");
+            console.error("Microphone inaccessible:", e);
+            alert("Microphone inaccessible. Autorisez le micro pour l'application puis réessayez.");
         }
+    };
+
+    micBtn.onmousedown = startRecording;
+    micBtn.ontouchstart = (e) => {
+        e.preventDefault();
+        startRecording();
+    };
+    micBtn.onpointerdown = (e) => {
+        e.preventDefault();
+        startRecording();
     };
 };
 
@@ -3847,6 +3862,7 @@ div.innerHTML = `${html}<div style="font-size:0.7em; margin-top:4px; opacity:0.7
         loadMessages();
     }, 10000);
 };
+
 
 
 

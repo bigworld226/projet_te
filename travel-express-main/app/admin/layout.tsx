@@ -26,6 +26,9 @@ export default async function AdminLayout({
   if (!user || user.role.name === 'STUDENT') {
     redirect('/student');
   }
+  if (user.role.name === "STUDENT_MANAGER") {
+    redirect("/messaging-admin");
+  }
 
   return (
     <div className="flex min-h-screen bg-[#F4F7FE]">

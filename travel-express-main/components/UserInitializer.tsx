@@ -8,6 +8,25 @@ import { useEffect } from 'react';
  */
 export function UserInitializer() {
   useEffect(() => {
+    const setupNotificationPermissionPrompt = () => {
+      if (typeof window === "undefined") return;
+      if (!("Notification" in window)) return;
+      if (Notification.permission !== "default") return;
+      if (localStorage.getItem("notif_prompt_registered") === "1") return;
+
+      const requestOnce = async () => {
+        try {
+          await Notification.requestPermission();
+        } catch {}
+        window.removeEventListener("click", requestOnce);
+        window.removeEventListener("touchstart", requestOnce);
+        localStorage.setItem("notif_prompt_registered", "1");
+      };
+
+      window.addEventListener("click", requestOnce, { once: true });
+      window.addEventListener("touchstart", requestOnce, { once: true });
+    };
+
     const initializeUser = async () => {
       try {
         // Récupérer les infos utilisateur ET le token en parallèle
@@ -39,6 +58,7 @@ export function UserInitializer() {
       }
     };
 
+    setupNotificationPermissionPrompt();
     initializeUser();
   }, []);
 

@@ -95,6 +95,12 @@ function getPermissionsForRole(roleName?: string): string[] {
             'USER.MANAGE',
         ],
         'SECRETARY': [
+            'USER.MANAGE',
+        ],
+        'QUALITY_OFFICER': [
+            'MESSAGE.READ',
+        ],
+        'STUDENT_MANAGER': [
             'CONVERSATION.READ',
             'CONVERSATION.CREATE',
             'MESSAGE.READ',
@@ -104,14 +110,6 @@ function getPermissionsForRole(roleName?: string): string[] {
             'GROUP.CREATE',
             'GROUP.EDIT',
             'GROUP.DELETE',
-        ],
-        'QUALITY_OFFICER': [
-            'CONVERSATION.READ',
-            'MESSAGE.READ',
-        ],
-        'STUDENT_MANAGER': [
-            'CONVERSATION.READ',
-            'MESSAGE.READ',
         ],
         'STUDENT': [
             'CONVERSATION.READ',

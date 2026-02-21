@@ -3,6 +3,12 @@ import { authService } from "@/services/auth.service";
 import { Permission } from "@prisma/client";
 import { redirect } from "next/navigation";
 
+const MESSAGING_ALLOWED_ROLES = new Set(["SUPERADMIN", "STUDENT_MANAGER"]);
+
+function canUseMessagingRole(roleName: string) {
+  return MESSAGING_ALLOWED_ROLES.has(roleName);
+}
+
 /**
  * Récupère l'utilisateur admin courant avec son rôle et permissions.
  * Redirige vers /student/ si c'est un étudiant.
@@ -77,6 +83,12 @@ export async function requireAdminWithPermission(
 
     if (!user || user.role.name === "STUDENT") return null;
     if (!hasPermission(user.role.permissions, requiredPermissions)) return null;
+    if (
+      requiredPermissions.includes("MANAGE_DISCUSSIONS") &&
+      !canUseMessagingRole(user.role.name)
+    ) {
+      return null;
+    }
 
     return user;
   } catch {
@@ -112,6 +124,12 @@ export async function requireAdminAction(requiredPermissions: Permission[]) {
   if (!hasPermission(user.role.permissions, requiredPermissions)) {
     throw new Error("Permissions insuffisantes");
   }
+  if (
+    requiredPermissions.includes("MANAGE_DISCUSSIONS") &&
+    !canUseMessagingRole(user.role.name)
+  ) {
+    throw new Error("Accès messagerie refusé pour ce rôle");
+  }
 
   return user;
 }
@@ -121,7 +139,7 @@ export async function requireAdminAction(requiredPermissions: Permission[]) {
  * null = accessible à tout admin (non-étudiant).
  */
 export const SIDEBAR_PERMISSIONS: Record<string, Permission[] | null> = {
-  "/admin/dashboard": null, // Tous les admins
+  "/admin/dashboard": ["ALL_ACCESS", "MANAGE_STUDENTS", "VIEW_STUDENTS", "MANAGE_DOCUMENTS", "VALIDATE_DOCUMENTS", "VIEW_FINANCES", "MANAGE_FINANCES", "MANAGE_UNIVERSITIES"],
   "/admin/students": ["MANAGE_STUDENTS", "VIEW_STUDENTS"],
   "/admin/documents": ["MANAGE_DOCUMENTS", "VALIDATE_DOCUMENTS"],
   "/admin/universities": ["MANAGE_UNIVERSITIES"],

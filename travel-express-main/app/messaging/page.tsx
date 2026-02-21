@@ -1,6 +1,6 @@
 ﻿'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 declare global {
   interface Window {
@@ -10,6 +10,8 @@ declare global {
 }
 
 export default function MessagingPage() {
+  const prevNotifCountRef = useRef(0);
+
   useEffect(() => {
     const clearClientCachesOnce = async () => {
       try {
@@ -47,7 +49,7 @@ export default function MessagingPage() {
 
         // Passer le rôle à la fenêtre globale
         (window as any).USER_ROLE = userRole;
-        const isAdmin = ["SUPERADMIN", "QUALITY_OFFICER", "SECRETARY", "STUDENT_MANAGER"].includes(userRole);
+        const isAdmin = ["SUPERADMIN", "STUDENT_MANAGER"].includes(userRole);
         (window as any).IS_ADMIN_INTERFACE = isAdmin;
 
         // Vérifier si le script a déjà été chargé
@@ -101,17 +103,48 @@ export default function MessagingPage() {
 
     loadAndInitialize();
   }, []);
+  useEffect(() => {
+    let mounted = true;
+    const notifAudio = new Audio("https://assets.mixkit.co/active_storage/sfx/2357/2357-preview.mp3");
+    notifAudio.volume = 0.5;
+
+    const pollNotifications = async () => {
+      try {
+        const res = await fetch("/api/notifications/summary", { credentials: "include" });
+        if (!res.ok) return;
+        const data = await res.json();
+        const total = Number(data?.total || 0);
+
+        if (!mounted) return;
+        if (total > prevNotifCountRef.current) {
+          try {
+            await notifAudio.play();
+          } catch {}
+
+          if ("Notification" in window && Notification.permission === "granted") {
+            new Notification("Travel Express", {
+              body: "Nouveau message ou mise à jour disponible.",
+            });
+          }
+        }
+
+        prevNotifCountRef.current = total;
+      } catch {}
+    };
+
+    pollNotifications();
+    const id = setInterval(pollNotifications, 12000);
+    return () => {
+      mounted = false;
+      clearInterval(id);
+    };
+  }, []);
 
   return (
     <>
       {/* CSS des discussions */}
       <link rel="stylesheet" href="/stylepagedeDiscussion.css" />
-      <link
-        rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
-      />
-
-      <div style={{ 
+            <div style={{ 
         margin: 0, 
         padding: 0, 
         height: '100vh',
@@ -477,4 +510,8 @@ export default function MessagingPage() {
     </>
   );
 }
+
+
+
+
 

@@ -14,7 +14,12 @@ export async function proxy(request: NextRequest) {
     // 1. Pages de connexion (Auth)
     const isAuthPage = path === '/login' || path === '/register';
     // 2. Pages protégées
-    const isProtectedPage = path.startsWith('/admin') || path.startsWith('/student');
+    const isProtectedPage =
+        path.startsWith('/admin') ||
+        path.startsWith('/student') ||
+        path.startsWith('/messaging-admin') ||
+        path.startsWith('/messaging-student') ||
+        path.startsWith('/messaging');
 
     // --- LOGIQUE DE PROTECTION ---
 
@@ -28,10 +33,41 @@ export async function proxy(request: NextRequest) {
             // VERIFICATION DU BADGE
             const { payload } = await jwtVerify(sessionCookie, SECRET_KEY);
             const role = payload.role as string;
+            const isMessagingPath =
+                path.startsWith('/messaging-admin') ||
+                path.startsWith('/messaging-student') ||
+                path.startsWith('/messaging');
+            const canUseAdminMessaging = role === 'SUPERADMIN' || role === 'STUDENT_MANAGER';
 
             // PROTECTION DES RÔLES : Un étudiant ne va pas en Admin
             if (path.startsWith('/admin') && role === 'STUDENT') {
                 return NextResponse.redirect(new URL('/student/dashboard', request.url));
+            }
+
+            // Gestionnaire d'étudiants : accès uniquement à la messagerie
+            if (path.startsWith('/admin') && role === 'STUDENT_MANAGER') {
+                return NextResponse.redirect(new URL('/messaging-admin', request.url));
+            }
+
+            // Secrétaire et Responsable Qualité : pas d'accès messagerie
+            if (isMessagingPath && ['SECRETARY', 'QUALITY_OFFICER'].includes(role)) {
+                return NextResponse.redirect(new URL('/admin/dashboard', request.url));
+            }
+
+            // /messaging-admin réservé aux rôles autorisés
+            if (path.startsWith('/messaging-admin') && !canUseAdminMessaging) {
+                if (role === 'STUDENT') {
+                    return NextResponse.redirect(new URL('/messaging-student', request.url));
+                }
+                return NextResponse.redirect(new URL('/admin/dashboard', request.url));
+            }
+
+            // /messaging-student réservé aux étudiants
+            if (path.startsWith('/messaging-student') && role !== 'STUDENT') {
+                if (canUseAdminMessaging) {
+                    return NextResponse.redirect(new URL('/messaging-admin', request.url));
+                }
+                return NextResponse.redirect(new URL('/admin/dashboard', request.url));
             }
         } catch (error) {
             // BADGE INVALIDE (modifié, expiré, etc.) -> Direction Login
@@ -42,8 +78,15 @@ export async function proxy(request: NextRequest) {
     // 3. S'il est deja connecte' -> On empeche de retourner sur /login
     if (isAuthPage && sessionCookie) {
         try {
-            await jwtVerify(sessionCookie, SECRET_KEY);
-            return NextResponse.redirect(new URL('/student/', request.url));
+            const { payload } = await jwtVerify(sessionCookie, SECRET_KEY);
+            const role = payload.role as string;
+            if (role === 'STUDENT') {
+                return NextResponse.redirect(new URL('/student/', request.url));
+            }
+            if (role === 'STUDENT_MANAGER') {
+                return NextResponse.redirect(new URL('/messaging-admin', request.url));
+            }
+            return NextResponse.redirect(new URL('/admin/dashboard', request.url));
         } catch (e) {
             console.error("Session cookie invalid during auth page access:", e);
             // Si le token est mort, on laisse l'utilisateur sur /login
@@ -57,6 +100,9 @@ export const config = {
     matcher: [
         '/student/:path*',
         '/admin/:path*',
+        '/messaging-admin',
+        '/messaging-student',
+        '/messaging',
         '/login',
         '/register',
     ],

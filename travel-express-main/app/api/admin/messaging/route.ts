@@ -4,6 +4,8 @@ import { requireAdminWithPermission } from "@/lib/permissions";
 import { verifyToken } from "@/lib/jwt";
 import { corsHeaders } from "@/lib/cors";
 
+const MESSAGING_ALLOWED_ROLES = new Set(["SUPERADMIN", "STUDENT_MANAGER"]);
+
 /**
  * GET /api/admin/messaging
  * Liste toutes les conversations auxquelles l'admin participe
@@ -36,7 +38,7 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    if (!user || user.role.name === "STUDENT") {
+    if (!user || !MESSAGING_ALLOWED_ROLES.has(user.role.name)) {
       return NextResponse.json({ error: "Non autorisé" }, { status: 403, headers: corsHeaders });
     }
 
@@ -145,7 +147,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    if (!user || user.role.name === "STUDENT") {
+    if (!user || !MESSAGING_ALLOWED_ROLES.has(user.role.name)) {
       return NextResponse.json({ error: "Non autorisé" }, { status: 403, headers: corsHeaders });
     }
     adminId = user.id;

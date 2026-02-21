@@ -8,6 +8,7 @@ const ADMIN_ROLES = new Set([
   "SECRETARY",
   "STUDENT_MANAGER",
 ]);
+const MESSAGING_ADMIN_ROLES = new Set(["SUPERADMIN", "STUDENT_MANAGER"]);
 
 const STUDENT_DECISION_STATUSES = [
   "REJECTED",
@@ -84,8 +85,11 @@ export async function GET() {
     const isAdmin = ADMIN_ROLES.has(user.role.name);
 
     if (isAdmin) {
+      const canSeeMessaging = MESSAGING_ADMIN_ROLES.has(user.role.name);
       const [unreadStudentMsgs, pendingDocuments, studentApplicationUpdates] = await Promise.all([
-        getUnreadCountForUser(user.id, { onlyStudentSenders: true }),
+        canSeeMessaging
+          ? getUnreadCountForUser(user.id, { onlyStudentSenders: true })
+          : Promise.resolve({ unreadCount: 0, latestUnreadAt: null }),
         prisma.document.count({
           where: {
             status: "PENDING",

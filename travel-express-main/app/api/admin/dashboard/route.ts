@@ -4,7 +4,7 @@ import { requireAdminWithPermission } from "@/lib/permissions";
 
 export async function GET() {
   // Tous les admins peuvent voir le dashboard
-  const admin = await requireAdminWithPermission(["ALL_ACCESS", "MANAGE_STUDENTS", "VIEW_STUDENTS", "MANAGE_DOCUMENTS", "VIEW_FINANCES", "MANAGE_FINANCES", "MANAGE_UNIVERSITIES", "MANAGE_DISCUSSIONS"]);
+  const admin = await requireAdminWithPermission(["ALL_ACCESS", "MANAGE_STUDENTS", "VIEW_STUDENTS", "MANAGE_DOCUMENTS", "VALIDATE_DOCUMENTS", "VIEW_FINANCES", "MANAGE_FINANCES", "MANAGE_UNIVERSITIES"]);
   if (!admin) {
     return NextResponse.json({ 
       error: "Accès refusé",

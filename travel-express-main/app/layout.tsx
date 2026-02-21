@@ -1,6 +1,7 @@
 ﻿import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import "@fortawesome/fontawesome-free/css/all.min.css";
 import ReactQueryProvider from "./ReactQueryProvider";
 import Navbar from "@/components/Navbar";
 import { UserInitializer } from "@/components/UserInitializer";
@@ -72,5 +73,8 @@ console.log('userdata',userData,"userid",userId)
     </html>
   );
 }
+
+
+
 
 

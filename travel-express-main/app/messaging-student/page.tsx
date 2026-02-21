@@ -67,12 +67,7 @@ export default function MessagingStudentPage() {
   return (
     <>
       <link rel="stylesheet" href="/stylepagedeDiscussion.css" />
-      <link
-        rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
-      />
-
-      <div style={{ 
+            <div style={{ 
         margin: 0, 
         padding: 0, 
         height: '100vh',
@@ -271,4 +266,6 @@ export default function MessagingStudentPage() {
     </>
   );
 }
+
+
 

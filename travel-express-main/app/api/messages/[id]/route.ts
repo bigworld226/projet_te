@@ -4,8 +4,6 @@ import { authService } from "@/services/auth.service";
 
 const ADMIN_ROLES = new Set([
   "SUPERADMIN",
-  "QUALITY_OFFICER",
-  "SECRETARY",
   "STUDENT_MANAGER",
 ]);
 
