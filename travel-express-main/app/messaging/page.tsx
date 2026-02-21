@@ -1,6 +1,7 @@
 ﻿'use client';
 
 import { useEffect, useRef } from 'react';
+import { logoutAction } from "@/actions/logout.action";
 
 declare global {
   interface Window {
@@ -11,6 +12,39 @@ declare global {
 
 export default function MessagingPage() {
   const prevNotifCountRef = useRef(0);
+  const currentRoleRef = useRef<string>('STUDENT');
+
+  const clearClientSessionData = async () => {
+    localStorage.removeItem("travelExpressUser");
+    localStorage.removeItem("travelExpressToken");
+    localStorage.removeItem("authToken");
+    sessionStorage.clear();
+
+    if ("caches" in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map((k) => caches.delete(k)));
+    }
+
+    if ("serviceWorker" in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map((r) => r.unregister()));
+    }
+  };
+
+  const handleBackArrow = async () => {
+    if (currentRoleRef.current === "STUDENT_MANAGER") {
+      try {
+        await logoutAction();
+      } catch (error) {
+        console.error("Logout error:", error);
+      }
+      await clearClientSessionData();
+      window.location.href = "/login";
+      return;
+    }
+
+    window.location.href = "/admin/dashboard";
+  };
 
   useEffect(() => {
     const clearClientCachesOnce = async () => {
@@ -46,6 +80,7 @@ export default function MessagingPage() {
           const userData = await userResponse.json();
           userRole = userData.role?.name || 'STUDENT';
         }
+        currentRoleRef.current = userRole;
 
         // Passer le rôle à la fenêtre globale
         (window as any).USER_ROLE = userRole;
@@ -159,7 +194,7 @@ export default function MessagingPage() {
               <div className="header-actions">
                 <button
                   className="icon-btn"
-                  onClick={() => { window.location.href = '/admin/dashboard'; }}
+                  onClick={handleBackArrow}
                   title="Retour au Dashboard"
                 >
                   <i className="fas fa-arrow-left"></i>
