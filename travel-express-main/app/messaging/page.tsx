@@ -12,6 +12,9 @@ declare global {
 
 export default function MessagingPage() {
   const prevNotifCountRef = useRef(0);
+  const prevUnreadCountRef = useRef(0);
+  const lastMessageAtRef = useRef<string | null>(null);
+  const notifInitializedRef = useRef(false);
   const currentRoleRef = useRef<string>('STUDENT');
 
   const clearClientSessionData = async () => {
@@ -142,6 +145,7 @@ export default function MessagingPage() {
     let mounted = true;
     const notifAudio = new Audio("https://assets.mixkit.co/active_storage/sfx/2357/2357-preview.mp3");
     notifAudio.volume = 0.5;
+    const storageKey = "messaging_notif_state_v1";
 
     const pollNotifications = async () => {
       try {
@@ -149,9 +153,40 @@ export default function MessagingPage() {
         if (!res.ok) return;
         const data = await res.json();
         const total = Number(data?.total || 0);
+        const unreadMessages = Number(data?.unreadMessages || 0);
+        const latestAt = typeof data?.latestAt === "string" ? data.latestAt : null;
 
         if (!mounted) return;
-        if (total > prevNotifCountRef.current) {
+
+        if (!notifInitializedRef.current) {
+          try {
+            const cached = sessionStorage.getItem(storageKey);
+            if (cached) {
+              const parsed = JSON.parse(cached);
+              prevNotifCountRef.current = Number(parsed?.total || total);
+              prevUnreadCountRef.current = Number(parsed?.unreadMessages || unreadMessages);
+              lastMessageAtRef.current = parsed?.latestAt || latestAt;
+            } else {
+              prevNotifCountRef.current = total;
+              prevUnreadCountRef.current = unreadMessages;
+              lastMessageAtRef.current = latestAt;
+            }
+          } catch {
+            prevNotifCountRef.current = total;
+            prevUnreadCountRef.current = unreadMessages;
+            lastMessageAtRef.current = latestAt;
+          }
+          notifInitializedRef.current = true;
+          return;
+        }
+
+        const hasNewUnread = unreadMessages > prevUnreadCountRef.current;
+        const hasNewTimestamp =
+          !!latestAt &&
+          latestAt !== lastMessageAtRef.current &&
+          unreadMessages > 0;
+
+        if (hasNewUnread || hasNewTimestamp) {
           try {
             await notifAudio.play();
           } catch {}
@@ -164,6 +199,16 @@ export default function MessagingPage() {
         }
 
         prevNotifCountRef.current = total;
+        prevUnreadCountRef.current = unreadMessages;
+        lastMessageAtRef.current = latestAt;
+        sessionStorage.setItem(
+          storageKey,
+          JSON.stringify({
+            total,
+            unreadMessages,
+            latestAt,
+          })
+        );
       } catch {}
     };
 
@@ -257,6 +302,24 @@ export default function MessagingPage() {
                 id="contactsGridAdmin"
                 style={{ display: 'flex', gap: '8px', overflow: 'auto', padding: '4px 0' }}
               ></div>
+            </div>
+
+            <div style={{ padding: '10px 12px', borderBottom: '1px solid var(--border)' }}>
+              <input
+                id="conversationSearchAdmin"
+                type="text"
+                placeholder="Rechercher un contact..."
+                style={{
+                  width: '100%',
+                  height: '36px',
+                  borderRadius: '10px',
+                  border: '1px solid var(--border)',
+                  background: 'var(--bg-input)',
+                  color: 'var(--text)',
+                  padding: '0 12px',
+                  outline: 'none'
+                }}
+              />
             </div>
 
             <div className="chat-list" id="chatList"></div>
@@ -372,6 +435,24 @@ export default function MessagingPage() {
                 👥 Mes Groupes
               </h3>
               <div id="contactsGridStudent" style={{ display: 'grid', gap: '8px' }}></div>
+            </div>
+
+            <div style={{ padding: '10px 12px', borderBottom: '1px solid var(--border)' }}>
+              <input
+                id="conversationSearchStudent"
+                type="text"
+                placeholder="Rechercher un contact..."
+                style={{
+                  width: '100%',
+                  height: '36px',
+                  borderRadius: '10px',
+                  border: '1px solid var(--border)',
+                  background: 'var(--bg-input)',
+                  color: 'var(--text)',
+                  padding: '0 12px',
+                  outline: 'none'
+                }}
+              />
             </div>
 
             <div className="chat-list" id="chatListStudent"></div>

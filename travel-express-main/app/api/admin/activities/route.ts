@@ -3,12 +3,11 @@ import { NextResponse } from "next/server";
 import { requireAdminWithPermission } from "@/lib/permissions";
 
 export async function GET() {
-  // Seul ALL_ACCESS peut voir le journal d'activités complet
-  const admin = await requireAdminWithPermission(["ALL_ACCESS"]);
+  const admin = await requireAdminWithPermission(["ALL_ACCESS", "MANAGE_DOCUMENTS", "VALIDATE_DOCUMENTS"]);
   if (!admin) {
     return NextResponse.json({ 
       error: "Accès refusé",
-      message: "Seul l'administrateur principal (SUPERADMIN) peut consulter le journal complet des activités."
+      message: "Vous n'avez pas la permission de consulter le journal des activités."
     }, { status: 403 });
   }
 

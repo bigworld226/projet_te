@@ -24,6 +24,9 @@ export default function AdminSidebar({ user }: { user: any }) {
   const [isOpenMobile, setIsOpenMobile] = useState(false);
   const [adminNotifCount, setAdminNotifCount] = useState(0);
   const prevNotifCountRef = useRef(0);
+  const prevUnreadCountRef = useRef(0);
+  const lastMessageAtRef = useRef<string | null>(null);
+  const notifInitializedRef = useRef(false);
   const notifAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const clearClientSessionData = async () => {
@@ -78,6 +81,7 @@ export default function AdminSidebar({ user }: { user: any }) {
     }
 
     let mounted = true;
+    const storageKey = "admin_sidebar_notif_state_v1";
 
     const pollNotifications = async () => {
       try {
@@ -85,11 +89,41 @@ export default function AdminSidebar({ user }: { user: any }) {
         if (!res.ok) return;
         const data = await res.json();
         const total = Number(data?.total || 0);
+        const unreadMessages = Number(data?.unreadMessages || 0);
+        const latestAt = typeof data?.latestAt === "string" ? data.latestAt : null;
 
         if (!mounted) return;
         setAdminNotifCount(total);
 
-        if (total > prevNotifCountRef.current) {
+        if (!notifInitializedRef.current) {
+          try {
+            const cached = sessionStorage.getItem(storageKey);
+            if (cached) {
+              const parsed = JSON.parse(cached);
+              prevNotifCountRef.current = Number(parsed?.total || total);
+              prevUnreadCountRef.current = Number(parsed?.unreadMessages || unreadMessages);
+              lastMessageAtRef.current = parsed?.latestAt || latestAt;
+            } else {
+              prevNotifCountRef.current = total;
+              prevUnreadCountRef.current = unreadMessages;
+              lastMessageAtRef.current = latestAt;
+            }
+          } catch {
+            prevNotifCountRef.current = total;
+            prevUnreadCountRef.current = unreadMessages;
+            lastMessageAtRef.current = latestAt;
+          }
+          notifInitializedRef.current = true;
+          return;
+        }
+
+        const hasNewUnread = unreadMessages > prevUnreadCountRef.current;
+        const hasNewTimestamp =
+          !!latestAt &&
+          latestAt !== lastMessageAtRef.current &&
+          unreadMessages > 0;
+
+        if (hasNewUnread || hasNewTimestamp) {
           try {
             await notifAudioRef.current?.play();
           } catch {}
@@ -107,6 +141,16 @@ export default function AdminSidebar({ user }: { user: any }) {
         }
 
         prevNotifCountRef.current = total;
+        prevUnreadCountRef.current = unreadMessages;
+        lastMessageAtRef.current = latestAt;
+        sessionStorage.setItem(
+          storageKey,
+          JSON.stringify({
+            total,
+            unreadMessages,
+            latestAt,
+          })
+        );
       } catch {}
     };
 

@@ -107,6 +107,8 @@ let conversationListeners = {};
 let selectedRecipients = [];
 let mediaRecorder = null;
 let audioChunks = [];
+let recordingTimerInterval = null;
+let recordingStartedAt = 0;
 let currentZoom = 1;
 let currentRotation = 0;
 let lightboxMediaList = [];
@@ -114,6 +116,7 @@ let currentLightboxIndex = -1;
 let isEditing = false;
 let isAdminUser = false;
 let isConversationWithAssistantSocial = false;
+let conversationSearchTerm = "";
 
 // ============================================================
 // STYLES DYNAMIQUES
@@ -1305,12 +1308,15 @@ function chargerConversations() {
             const responseData = await res.json(); 
             const rawConversations = isAdminUser ? (responseData.conversations || []) : (Array.isArray(responseData) ? responseData : []); 
             const conversations = rawConversations.filter(conv => conv.subject !== "Diffusion privée"); 
+            const searchInput = document.getElementById(isAdminUser ? "conversationSearchAdmin" : "conversationSearchStudent");
+            const searchTerm = ((searchInput && searchInput.value) ? searchInput.value : conversationSearchTerm || "").trim().toLowerCase();
             
             console.log("✅ Conversations chargées:", conversations.length);
             
             if (currentTab !== "discussions") return;
 
             chatList.innerHTML = "";
+            let renderedCount = 0;
             conversations.forEach(conv => {
                 const item = document.createElement("div");
                 item.className = "conversation-item";
@@ -1344,6 +1350,11 @@ function chargerConversations() {
                     displayName = otherUser?.fullName || "Sans nom";
                     avatar = otherUser?.profileImage || DEFAULT_IMG;
                     lastMessage = conv.messages?.[0]?.content || "Aucun message";
+                }
+
+                const searchableText = `${displayName} ${lastMessage}`.toLowerCase();
+                if (searchTerm && !searchableText.includes(searchTerm)) {
+                    return;
                 }
                 
                 item.innerHTML = `
@@ -1390,7 +1401,15 @@ function chargerConversations() {
                 });
                 
                 chatList.appendChild(item);
+                renderedCount += 1;
             });
+
+            if (renderedCount === 0) {
+                const message = searchTerm
+                    ? "Aucun contact ne correspond a votre recherche."
+                    : "Aucune conversation.";
+                chatList.innerHTML = `<p style='color:var(--text-muted); padding:20px; text-align:center;'>${message}</p>`;
+            }
         } catch (err) {
             console.error("❌ Erreur chargerConversations:", err);
             chatList.innerHTML = "<p style='color:red; padding:20px;'>❌ Erreur de chargement: " + err.message + "</p>";
@@ -2347,12 +2366,33 @@ const setupMicrophone = (micBtn) => {
             
             mediaRecorder.onstart = () => {
                 const voiceOverlayId = getVoiceOverlayId();
+                const timerId = isAdminUser ? "voiceTimer" : "voiceTimerStudent";
+                const timerEl = document.getElementById(timerId);
                 document.getElementById(voiceOverlayId).style.display = "flex";
+                recordingStartedAt = Date.now();
+
+                if (timerEl) timerEl.textContent = "0:00";
+                if (recordingTimerInterval) clearInterval(recordingTimerInterval);
+
+                recordingTimerInterval = setInterval(() => {
+                    const elapsedSeconds = Math.floor((Date.now() - recordingStartedAt) / 1000);
+                    const minutes = Math.floor(elapsedSeconds / 60);
+                    const seconds = elapsedSeconds % 60;
+                    if (timerEl) timerEl.textContent = `${minutes}:${String(seconds).padStart(2, "0")}`;
+                }, 1000);
             };
             
             mediaRecorder.onstop = async () => {
                 const voiceOverlayId = getVoiceOverlayId();
+                const timerId = isAdminUser ? "voiceTimer" : "voiceTimerStudent";
+                const timerEl = document.getElementById(timerId);
                 document.getElementById(voiceOverlayId).style.display = "none";
+                if (recordingTimerInterval) {
+                    clearInterval(recordingTimerInterval);
+                    recordingTimerInterval = null;
+                }
+                if (timerEl) timerEl.textContent = "0:00";
+                recordingStartedAt = 0;
                 
                 const blob = new Blob(audioChunks, { type: 'audio/ogg' });
                 const form = new FormData();
@@ -2563,6 +2603,8 @@ function setupEventListeners() {
     cloneAndReplace("msgInputStudent");
     cloneAndReplace("btnEnvoyer");
     cloneAndReplace("btnEnvoyerStudent");
+    cloneAndReplace("conversationSearchAdmin");
+    cloneAndReplace("conversationSearchStudent");
 
     // Setup pour ADMIN
     const inputAdmin = document.getElementById("msgInput");
@@ -2635,6 +2677,22 @@ function setupEventListeners() {
         console.log("✅ Listener click attaché à btnEnvoyerStudent");
     } else {
         console.warn("❌ btnEnvoyerStudent NOT FOUND!");
+    }
+
+    const searchInputAdmin = document.getElementById("conversationSearchAdmin");
+    if (searchInputAdmin) {
+        searchInputAdmin.addEventListener("input", (e) => {
+            conversationSearchTerm = (e.target.value || "").trim();
+            if (currentTab === "discussions") chargerConversations();
+        });
+    }
+
+    const searchInputStudent = document.getElementById("conversationSearchStudent");
+    if (searchInputStudent) {
+        searchInputStudent.addEventListener("input", (e) => {
+            conversationSearchTerm = (e.target.value || "").trim();
+            if (currentTab === "discussions") chargerConversations();
+        });
     }
 
     // Setup microphones

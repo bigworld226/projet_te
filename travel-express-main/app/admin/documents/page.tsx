@@ -1,13 +1,23 @@
 'use client';
 import axios from "axios";
 import { useQuery } from "@tanstack/react-query";
-import {prisma} from "@/lib/prisma";
 import { DocumentActions } from "@/components/admin/DocumentActions"; 
 import Link from "next/link";
 import { FileText, Search, Filter, Download, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { getFileUrl } from "@/lib/storage";
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
+
+function resolveDocumentUrl(url?: string | null) {
+  if (!url) return "";
+  return String(url).trim();
+}
+
+function normalizeDateInput(dateInput: string) {
+  if (!dateInput) return null;
+  const date = new Date(`${dateInput}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return null;
+  return date;
+}
 
 export default function AdminDocumentsPage() {
   const { data: documents = [], isLoading, error } = useQuery({
@@ -18,19 +28,55 @@ export default function AdminDocumentsPage() {
     }
   });
 
-  const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
+  const [searchTerm, setSearchTerm] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
+  const [selectedType, setSelectedType] = useState("ALL");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
 
-  useEffect(() => {
-    async function fetchUrls() {
-      if (!documents || documents.length === 0) return;
-      const urlMap: Record<string, string> = {};
-      await Promise.all(documents.map(async (doc: any) => {
-        urlMap[doc.id] = (await getFileUrl(doc.url)) ?? "";
-      }));
-      setSignedUrls(urlMap);
-    }
-    fetchUrls();
+  const availableTypes = useMemo(() => {
+    const types = new Set<string>();
+    documents.forEach((doc: any) => {
+      if (doc?.type) types.add(String(doc.type));
+    });
+    return ["ALL", ...Array.from(types).sort((a, b) => a.localeCompare(b))];
   }, [documents]);
+
+  const filteredDocuments = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+    const startDate = normalizeDateInput(dateFrom);
+    const endDate = normalizeDateInput(dateTo);
+
+    return documents.filter((doc: any) => {
+      const docDate = new Date(doc.createdAt);
+      const userName = doc?.application?.user?.fullName || "";
+      const userEmail = doc?.application?.user?.email || "";
+      const docName = doc?.name || "";
+      const docType = doc?.type || "";
+
+      const matchesText =
+        !query ||
+        String(docName).toLowerCase().includes(query) ||
+        String(docType).toLowerCase().includes(query) ||
+        String(userName).toLowerCase().includes(query) ||
+        String(userEmail).toLowerCase().includes(query);
+
+      const matchesType = selectedType === "ALL" || docType === selectedType;
+
+      const matchesStartDate =
+        !startDate || (!Number.isNaN(docDate.getTime()) && docDate >= startDate);
+
+      const matchesEndDate = (() => {
+        if (!endDate) return true;
+        if (Number.isNaN(docDate.getTime())) return false;
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        return docDate <= end;
+      })();
+
+      return matchesText && matchesType && matchesStartDate && matchesEndDate;
+    });
+  }, [documents, searchTerm, selectedType, dateFrom, dateTo]);
 
   if (isLoading) return <div className="p-12 text-center font-black text-[#db9b16] animate-pulse uppercase italic tracking-widest text-xs">Chargement des documents...</div>;
   
@@ -74,14 +120,74 @@ export default function AdminDocumentsPage() {
                 <input 
                    type="text" 
                    placeholder="Rechercher un document..." 
+                   value={searchTerm}
+                   onChange={(e) => setSearchTerm(e.target.value)}
                    className="pl-10 pr-4 h-12 rounded-xl border-none shadow-sm bg-white text-sm font-medium focus:ring-2 focus:ring-blue-500 w-64 outline-none"
                 />
              </div>
-             <Button variant="outline" className="h-12 w-12 rounded-xl bg-white border-none shadow-sm text-slate-500 p-0 flex items-center justify-center">
+             <Button
+                variant="outline"
+                type="button"
+                onClick={() => setShowFilters((prev) => !prev)}
+                className={`h-12 w-12 rounded-xl border-none shadow-sm p-0 flex items-center justify-center transition-colors ${showFilters ? "bg-[#db9b16] text-white" : "bg-white text-slate-500"}`}
+             >
                 <Filter size={20} />
              </Button>
         </div>
       </header>
+
+      {showFilters && (
+        <div className="mb-6 bg-white border border-slate-100 rounded-2xl p-4 flex flex-col md:flex-row gap-3 md:items-end">
+          <div className="flex-1">
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Type de document</label>
+            <select
+              value={selectedType}
+              onChange={(e) => setSelectedType(e.target.value)}
+              className="h-11 w-full rounded-xl bg-slate-50 border border-slate-200 px-3 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-[#db9b16]"
+            >
+              {availableTypes.map((type) => (
+                <option key={type} value={type}>
+                  {type === "ALL" ? "Tous les types" : type}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Date de début</label>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="h-11 rounded-xl bg-slate-50 border border-slate-200 px-3 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-[#db9b16]"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Date de fin</label>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="h-11 rounded-xl bg-slate-50 border border-slate-200 px-3 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-[#db9b16]"
+            />
+          </div>
+
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              setSelectedType("ALL");
+              setDateFrom("");
+              setDateTo("");
+              setSearchTerm("");
+            }}
+            className="h-11 rounded-xl"
+          >
+            Réinitialiser
+          </Button>
+        </div>
+      )}
 
       <div className="bg-white rounded-3xl shadow-sm border border-slate-100/50 overflow-hidden">
         <div className="overflow-x-auto">
@@ -97,17 +203,20 @@ export default function AdminDocumentsPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-50">
-            {documents.map((doc: any) => (
+            {filteredDocuments.map((doc: any) => {
+              const fileUrl = resolveDocumentUrl(doc.url);
+              const ext = doc?.name?.split(".").pop() || doc?.url?.split(".").pop() || "file";
+              return (
               <tr key={doc.id} className="hover:bg-slate-50/50 transition-colors group">
                 <td className="py-4 px-6">
-                  {signedUrls[doc.id] ? (
-                    <Link href={signedUrls[doc.id]} target="_blank" className="flex items-center gap-3 group/link">
+                  {fileUrl ? (
+                    <Link href={fileUrl} target="_blank" className="flex items-center gap-3 group/link">
                        <div className="h-10 w-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center group-hover/link:bg-blue-600 group-hover/link:text-white transition-colors">
                           <FileText size={20} />
                        </div>
                        <div>
                           <div className="font-bold text-slate-800 group-hover/link:text-blue-600 transition-colors">{doc.name}</div>
-                          <div className="text-slate-400 text-xs font-medium uppercase">{doc.url.split('.').pop()}</div>
+                          <div className="text-slate-400 text-xs font-medium uppercase">{ext}</div>
                        </div>
                     </Link>
                   ) : (
@@ -132,12 +241,12 @@ export default function AdminDocumentsPage() {
                    <StatusBadge status={doc.status} />
                 </td>
                 <td className="py-4 px-6 text-right flex justify-end items-center gap-2">
-                   {signedUrls[doc.id] ? (
-                     <Link href={signedUrls[doc.id]} target="_blank">
+                   {fileUrl ? (
+                     <a href={fileUrl} target="_blank" rel="noreferrer" download>
                         <Button variant="ghost" size="sm" className="h-9 w-9 p-0 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50">
                            <Download size={18} />
                         </Button>
-                     </Link>
+                     </a>
                    ) : (
                      <Button variant="ghost" size="sm" className="h-9 w-9 p-0 rounded-lg text-slate-400 opacity-50 cursor-not-allowed" disabled>
                        <Download size={18} />
@@ -148,12 +257,15 @@ export default function AdminDocumentsPage() {
                    </div>
                 </td>
               </tr>
-            ))}
+            )})}
           </tbody>
         </table>
         </div>
         {documents.length === 0 && (
            <div className="p-12 text-center text-slate-400">Aucun document téléversé.</div>
+        )}
+        {documents.length > 0 && filteredDocuments.length === 0 && (
+           <div className="p-12 text-center text-slate-400">Aucun document ne correspond aux filtres actuels.</div>
         )}
       </div>
     </main>

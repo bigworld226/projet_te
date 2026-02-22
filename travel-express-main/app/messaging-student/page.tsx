@@ -129,6 +129,24 @@ export default function MessagingStudentPage() {
               <div id="contactsGridStudent" style={{ display: 'grid', gap: '8px' }}></div>
             </div>
 
+            <div style={{ padding: '10px 12px', borderBottom: '1px solid var(--border)' }}>
+              <input
+                id="conversationSearchStudent"
+                type="text"
+                placeholder="Rechercher un contact..."
+                style={{
+                  width: '100%',
+                  height: '36px',
+                  borderRadius: '10px',
+                  border: '1px solid var(--border)',
+                  background: 'var(--bg-input)',
+                  color: 'var(--text)',
+                  padding: '0 12px',
+                  outline: 'none'
+                }}
+              />
+            </div>
+
             <div className="chat-list" id="chatListStudent"></div>
           </div>
 

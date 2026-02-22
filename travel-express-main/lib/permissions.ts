@@ -4,9 +4,17 @@ import { Permission } from "@prisma/client";
 import { redirect } from "next/navigation";
 
 const MESSAGING_ALLOWED_ROLES = new Set(["SUPERADMIN", "STUDENT_MANAGER"]);
+const DOCUMENT_FALLBACK_ROLES = new Set(["SECRETARY", "QUALITY_OFFICER"]);
 
 function canUseMessagingRole(roleName: string) {
   return MESSAGING_ALLOWED_ROLES.has(roleName);
+}
+
+function hasDocumentFallbackByRole(roleName: string, requiredPermissions: Permission[]) {
+  if (!DOCUMENT_FALLBACK_ROLES.has(roleName)) return false;
+  return requiredPermissions.some(
+    (permission) => permission === "MANAGE_DOCUMENTS" || permission === "VALIDATE_DOCUMENTS"
+  );
 }
 
 /**
@@ -82,7 +90,12 @@ export async function requireAdminWithPermission(
     });
 
     if (!user || user.role.name === "STUDENT") return null;
-    if (!hasPermission(user.role.permissions, requiredPermissions)) return null;
+    if (
+      !hasPermission(user.role.permissions, requiredPermissions) &&
+      !hasDocumentFallbackByRole(user.role.name, requiredPermissions)
+    ) {
+      return null;
+    }
     if (
       requiredPermissions.includes("MANAGE_DISCUSSIONS") &&
       !canUseMessagingRole(user.role.name)
@@ -121,7 +134,10 @@ export async function requireAdminAction(requiredPermissions: Permission[]) {
     redirect("/student/");
   }
 
-  if (!hasPermission(user.role.permissions, requiredPermissions)) {
+  if (
+    !hasPermission(user.role.permissions, requiredPermissions) &&
+    !hasDocumentFallbackByRole(user.role.name, requiredPermissions)
+  ) {
     throw new Error("Permissions insuffisantes");
   }
   if (
@@ -144,7 +160,7 @@ export const SIDEBAR_PERMISSIONS: Record<string, Permission[] | null> = {
   "/admin/documents": ["MANAGE_DOCUMENTS", "VALIDATE_DOCUMENTS"],
   "/admin/universities": ["MANAGE_UNIVERSITIES"],
   "/admin/finances": ["VIEW_FINANCES", "MANAGE_FINANCES"],
-  "/admin/activity": ["ALL_ACCESS"], // Seulement SuperAdmin
+  "/admin/activity": ["ALL_ACCESS", "MANAGE_DOCUMENTS", "VALIDATE_DOCUMENTS"],
   "/admin/archive": ["ALL_ACCESS"],
   "/admin/messaging": ["MANAGE_DISCUSSIONS"],
   "/admin/settings": ["ALL_ACCESS"],
