@@ -33,7 +33,7 @@ export async function DELETE(
         }
 
         // Vérifier les permissions - Admin uniquement
-        if (!["SUPERADMIN", "SECRETARY"].includes(tokenPayload.role.name)) {
+        if (!["SUPERADMIN", "STUDENT_MANAGER"].includes(tokenPayload.role.name)) {
             return NextResponse.json(
                 { message: "Accès refusé - seuls les admins peuvent supprimer" },
                 { status: 403, headers: corsHeaders }

@@ -204,7 +204,7 @@ export default function AdminDocumentsPage() {
           </thead>
           <tbody className="divide-y divide-slate-50">
             {filteredDocuments.map((doc: any) => {
-              const fileUrl = resolveDocumentUrl(doc.url);
+              const fileUrl = resolveDocumentUrl(doc.downloadUrl || doc.url);
               const ext = doc?.name?.split(".").pop() || doc?.url?.split(".").pop() || "file";
               return (
               <tr key={doc.id} className="hover:bg-slate-50/50 transition-colors group">

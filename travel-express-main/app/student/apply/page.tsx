@@ -60,23 +60,23 @@ import { Suspense } from "react";
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 py-12 px-6">
-      <div className="max-w-2xl mx-auto bg-white rounded-[2.5rem] shadow-2xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
+    <div className="min-h-screen bg-slate-50 py-6 md:py-12 px-3 md:px-6">
+      <div className="max-w-2xl mx-auto bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
         
         {/* Header */}
-        <div className="bg-slate-900 p-10 text-white relative overflow-hidden">
+        <div className="bg-slate-900 p-5 md:p-10 text-white relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-[#db9b16]/10 rounded-full blur-3xl -mr-16 -mt-16" />
           <div className="flex items-center gap-3 mb-4">
             <div className="p-2 bg-[#db9b16]/20 rounded-lg">
               <Plane className="text-[#db9b16] w-5 h-5" />
             </div>
-            <span className="text-[#db9b16] font-black uppercase tracking-[0.2em] text-xs">Dossier d'admission</span>
+            <span className="text-[#db9b16] font-black uppercase tracking-[0.15em] md:tracking-[0.2em] text-[10px] md:text-xs break-words">Dossier d'admission</span>
           </div>
-          <h1 className="text-4xl font-black tracking-tight">Destination : {country}</h1>
-          <p className="text-slate-400 mt-2 text-sm font-medium">Complétez votre profil pour lancer la procédure.</p>
+          <h1 className="text-2xl md:text-4xl font-black tracking-tight break-words">Destination : {country}</h1>
+          <p className="text-slate-400 mt-2 text-xs md:text-sm font-medium break-words">Complétez votre profil pour lancer la procédure.</p>
         </div>
 
-        <form onSubmit={onSubmit} className="p-10 space-y-8">
+        <form onSubmit={onSubmit} className="p-4 md:p-10 space-y-8">
           <input type="hidden" name="country" value={country} />
 
           {/* Section 1 : Identité */}
@@ -160,7 +160,7 @@ import { Suspense } from "react";
           <Button 
             disabled={isPending}
             type="submit" 
-            className="w-full bg-slate-900 text-white py-8 rounded-[1.5rem] font-black text-xl shadow-xl hover:bg-[#db9b16] hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3"
+            className="w-full bg-slate-900 text-white py-6 md:py-8 rounded-[1.2rem] md:rounded-[1.5rem] font-black text-base md:text-xl shadow-xl hover:bg-[#db9b16] hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3 whitespace-normal text-center leading-tight px-3"
           >
             {isPending ? (
               <>

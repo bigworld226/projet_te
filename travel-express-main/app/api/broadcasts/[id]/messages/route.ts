@@ -22,7 +22,7 @@ async function authenticateRequester(req: NextRequest): Promise<AuthenticatedUse
       return {
         id: user.id,
         roleName,
-        isAdmin: roleName === "SUPERADMIN" || roleName === "SECRETARY",
+        isAdmin: roleName === "SUPERADMIN" || roleName === "STUDENT_MANAGER",
       };
     }
   }
@@ -43,7 +43,7 @@ async function authenticateRequester(req: NextRequest): Promise<AuthenticatedUse
   return {
     id: user.id,
     roleName,
-    isAdmin: roleName === "SUPERADMIN" || roleName === "SECRETARY",
+    isAdmin: roleName === "SUPERADMIN" || roleName === "STUDENT_MANAGER",
   };
 }
 

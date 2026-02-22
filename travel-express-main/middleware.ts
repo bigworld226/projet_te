@@ -44,11 +44,6 @@ export async function proxy(request: NextRequest) {
                 return NextResponse.redirect(new URL('/student/dashboard', request.url));
             }
 
-            // Gestionnaire d'étudiants : accès uniquement à la messagerie
-            if (path.startsWith('/admin') && role === 'STUDENT_MANAGER') {
-                return NextResponse.redirect(new URL('/messaging-admin', request.url));
-            }
-
             // Secrétaire et Responsable Qualité : pas d'accès messagerie
             if (isMessagingPath && ['SECRETARY', 'QUALITY_OFFICER'].includes(role)) {
                 return NextResponse.redirect(new URL('/admin/dashboard', request.url));
@@ -82,9 +77,6 @@ export async function proxy(request: NextRequest) {
             const role = payload.role as string;
             if (role === 'STUDENT') {
                 return NextResponse.redirect(new URL('/student/', request.url));
-            }
-            if (role === 'STUDENT_MANAGER') {
-                return NextResponse.redirect(new URL('/messaging-admin', request.url));
             }
             return NextResponse.redirect(new URL('/admin/dashboard', request.url));
         } catch (e) {

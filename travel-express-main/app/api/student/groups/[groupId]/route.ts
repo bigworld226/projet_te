@@ -26,7 +26,7 @@ export async function DELETE(
 
     const userId = tokenPayload.id;
     const userRole = tokenPayload.role?.name;
-    const isAdmin = userRole === "SUPERADMIN" || userRole === "SECRETARY";
+    const isAdmin = userRole === "SUPERADMIN" || userRole === "STUDENT_MANAGER";
 
     // Récupérer le groupe
     const group = await prisma.group.findUnique({

@@ -25,6 +25,22 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+/* Mobile form overflow guard */
+@media (max-width: 640px) {
+  input,
+  textarea,
+  select,
+  button,
+  label,
+  p,
+  h1,
+  h2,
+  h3 {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+}
+
 @keyframes blob {
   0% { transform: translate(0px, 0px) scale(1); }
   33% { transform: translate(30px, -50px) scale(1.1); }

@@ -69,7 +69,7 @@ const Navbar = ({ isConnected, userRole, userName }: NavbarProps) => {
         if (!res.ok) return;
         const data = await res.json();
         if (!mounted) return;
-        setStudentNotifCount(Number(data?.total || 0));
+        setStudentNotifCount(Number(data?.unreadMessages ?? data?.total ?? 0));
       } catch {}
     };
 
@@ -149,7 +149,7 @@ const Navbar = ({ isConnected, userRole, userName }: NavbarProps) => {
               >
                 <MessageCircle size={18} />
                 {studentNotifCount > 0 && (
-                  <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-red-500 text-white text-[11px] font-bold flex items-center justify-center">
+                  <span className="pointer-events-none absolute top-0 right-0 translate-x-1/2 -translate-y-1/2 min-w-5 h-5 px-1 rounded-full bg-red-500 text-white text-[11px] font-bold flex items-center justify-center leading-none">
                     {studentNotifCount > 99 ? "99+" : studentNotifCount}
                   </span>
                 )}

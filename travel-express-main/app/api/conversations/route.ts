@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
         // Récupérer les conversations selon le rôle
         let conversations;
         
-        if (tokenPayload.role.name === "SUPERADMIN" || tokenPayload.role.name === "SECRETARY") {
+        if (tokenPayload.role.name === "SUPERADMIN" || tokenPayload.role.name === "STUDENT_MANAGER") {
             // Admin voit toutes les conversations
             conversations = await prisma.conversation.findMany({
                 include: {

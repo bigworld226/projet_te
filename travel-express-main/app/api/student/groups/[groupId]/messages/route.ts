@@ -42,7 +42,7 @@ export async function GET(
       select: { id: true, role: { select: { name: true } } }
     });
 
-    const isAdmin = user?.role?.name === 'SUPERADMIN' || user?.role?.name === 'SECRETARY';
+    const isAdmin = user?.role?.name === 'SUPERADMIN' || user?.role?.name === 'STUDENT_MANAGER';
 
     // Vérifier que l'utilisateur est admin OU fait partie du groupe
     if (!isAdmin) {
@@ -117,7 +117,7 @@ export async function POST(
       select: { id: true, role: { select: { name: true } } }
     });
 
-    const isAdmin = user?.role?.name === 'SUPERADMIN' || user?.role?.name === 'SECRETARY';
+    const isAdmin = user?.role?.name === 'SUPERADMIN' || user?.role?.name === 'STUDENT_MANAGER';
 
     // Vérifier que l'utilisateur est admin OU fait partie du groupe
     if (!isAdmin) {

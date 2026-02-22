@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma"
 import { redirect } from "next/navigation"
 import { authService } from '@/services/auth.service';
 import { 
-  FileText, MessageCircle, ChevronRight, Check, 
+  FileText, MessageCircle, Check, 
   GraduationCap, Download, MapPin, Loader2, 
   Sparkles, Building2, Search, ArrowLeft, Globe2
 } from "lucide-react"
@@ -274,23 +274,6 @@ export default async function ApplicationDetail({ params }: { params: Promise<{ 
               className="min-h-[600px]"
             />
 
-            {/* WHATSAPP CTA PREMIUM */}
-            <Link 
-              href="https://wa.me/+22665604592" 
-              className="flex items-center gap-6 p-8 bg-emerald-50 rounded-[3rem] border border-emerald-100/50 group transition-all hover:shadow-2xl hover:shadow-emerald-200/50 relative overflow-hidden"
-            >
-              <div className="absolute top-0 right-0 w-32 h-32 bg-white/20 rounded-full blur-2xl -mr-16 -mt-16" />
-              <div className="h-16 w-16 bg-emerald-500 rounded-[2rem] flex items-center justify-center text-white shadow-xl shadow-emerald-500/30 group-hover:scale-110 group-hover:rotate-6 transition-all">
-                <MessageCircle size={32} />
-              </div>
-              <div className="text-left relative z-10">
-                <div className="font-black text-emerald-950 text-base uppercase italic tracking-tighter">Votre Conseiller</div>
-                <p className="text-[10px] text-emerald-600/80 font-black uppercase tracking-widest">Réponse en moins de 2h</p>
-              </div>
-              <div className="ml-auto h-10 w-10 flex items-center justify-center rounded-full bg-white text-emerald-500 shadow-sm group-hover:translate-x-2 transition-transform">
-                <ChevronRight size={20} strokeWidth={3} />
-              </div>
-            </Link>
           </section>
         </div>
       </main>

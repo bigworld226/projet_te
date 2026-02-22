@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 
 // Rôles admin disponibles pour l'élévation (SUPERADMIN peut choisir)
 const ADMIN_ROLES = [
-  { name: 'STUDENT_MANAGER', label: 'Gestionnaire Étudiants', description: 'Accès messagerie admin uniquement', color: 'bg-blue-50 text-blue-700 border-blue-200' },
+  { name: 'STUDENT_MANAGER', label: 'Gestionnaire Étudiants', description: 'Gestion des étudiants + messagerie', color: 'bg-blue-50 text-blue-700 border-blue-200' },
   { name: 'QUALITY_OFFICER', label: 'Responsable Qualité', description: 'Valide les documents (sans messagerie)', color: 'bg-green-50 text-green-700 border-green-200' },
   { name: 'SECRETARY', label: 'Secrétaire', description: 'Gestion administrative (sans messagerie)', color: 'bg-purple-50 text-purple-700 border-purple-200' },
   { name: 'FINANCE_MANAGER', label: 'Gestionnaire Finances', description: 'Gestion financière', color: 'bg-yellow-50 text-yellow-700 border-yellow-200' },

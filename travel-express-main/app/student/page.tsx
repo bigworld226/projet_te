@@ -11,7 +11,9 @@ import {
   Compass,
   Map,
   ShieldCheck,
-  CheckCircle2
+  CheckCircle2,
+  Download,
+  Receipt
 } from "lucide-react"
 import { authService } from "@/services/auth.service";
 import ApplicationCard from '@/components/student/ApplicationCard';
@@ -20,7 +22,7 @@ async function getStudentData() {
   const session = await authService.getSession();
   if (!session) return null;
 
-  return await prisma.user.findUnique({
+  const student = await prisma.user.findUnique({
     where: { id: session.userId },
     include: {
       applications: {
@@ -32,6 +34,37 @@ async function getStudentData() {
       }
     }
   });
+
+  if (!student) return null;
+
+  const receiptLogs = await prisma.activityLog.findMany({
+    where: {
+      action: "RECEIPT_GENERATED",
+      targetType: "RECEIPT",
+      targetId: student.id,
+    },
+    orderBy: { createdAt: "desc" },
+    take: 6,
+  });
+
+  const receipts = receiptLogs.map((log) => {
+    let details: any = null;
+    try {
+      details = log.details ? JSON.parse(log.details) : null;
+    } catch {
+      details = null;
+    }
+    return {
+      id: log.id,
+      createdAt: log.createdAt,
+      receiptType: details?.receiptType ?? "Reçu",
+      amount: details?.amount ?? null,
+      note: details?.note ?? "",
+      downloadUrl: `/api/student/receipts/${log.id}/download`,
+    };
+  });
+
+  return { ...student, receipts };
 }
 
 export default async function StudentDashboard() {
@@ -97,6 +130,42 @@ export default async function StudentDashboard() {
             </div>
           </div>
         </div>
+
+        <section className="mb-16 bg-white border border-slate-100 rounded-[2.5rem] shadow-sm p-8 animate-in fade-in duration-700">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="h-10 w-10 rounded-xl bg-[#db9b16]/10 text-[#db9b16] flex items-center justify-center">
+              <Receipt size={18} />
+            </div>
+            <div>
+              <h2 className="text-xl font-black text-slate-900">News - Reçus</h2>
+              <p className="text-xs text-slate-500 uppercase tracking-wide">Documents récents envoyés par l'administration</p>
+            </div>
+          </div>
+          {student.receipts.length === 0 ? (
+            <p className="text-slate-500">Aucun reçu disponible pour le moment.</p>
+          ) : (
+            <div className="space-y-3">
+              {student.receipts.map((receipt) => (
+                <div key={receipt.id} className="border border-slate-100 rounded-2xl p-4 flex items-center justify-between gap-3">
+                  <div>
+                    <p className="font-semibold text-slate-900">{receipt.receiptType}</p>
+                    <p className="text-sm text-slate-500">
+                      {new Date(receipt.createdAt).toLocaleString("fr-FR")}
+                      {receipt.amount !== null ? ` - ${receipt.amount.toLocaleString("fr-FR")} XOF` : ""}
+                    </p>
+                  </div>
+                  <a
+                    href={receipt.downloadUrl}
+                    className="h-9 px-3 rounded-lg bg-slate-100 hover:bg-slate-200 inline-flex items-center gap-2 text-sm text-slate-700"
+                  >
+                    <Download size={14} />
+                    Télécharger
+                  </a>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
 
         {/* 🗺️ AFFICHAGE DES GROUPES PAR PAYS */}
         {totalApps > 0 ? (
@@ -207,7 +276,7 @@ export default async function StudentDashboard() {
           </div>
           <div className="h-px w-12 bg-slate-100 hidden md:block" />
           <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">
-            Une question ? Contactez votre conseiller via WhatsApp
+            Une question ? Contactez votre conseiller via la messagerie du portail
           </p>
         </div>
         <p className="mt-12 text-slate-300 text-[9px] font-black uppercase tracking-[0.5em]">

@@ -93,7 +93,7 @@ export async function GET() {
         prisma.document.count({
           where: {
             status: "PENDING",
-            createdAt: { gte: since },
+            updatedAt: { gte: since },
             application: { user: { role: { name: "STUDENT" } } },
           },
         }),
@@ -122,7 +122,7 @@ export async function GET() {
       });
     }
 
-    const [unreadAdminMsgs, decisionDocuments, decisionApplications] = await Promise.all([
+    const [unreadAdminMsgs, decisionDocuments, decisionApplications, newReceipts] = await Promise.all([
       getUnreadCountForUser(user.id, { excludeStudentSenders: true }),
       prisma.document.count({
         where: {
@@ -138,9 +138,17 @@ export async function GET() {
           updatedAt: { gte: since },
         },
       }),
+      prisma.activityLog.count({
+        where: {
+          action: "RECEIPT_GENERATED",
+          targetType: "RECEIPT",
+          targetId: user.id,
+          createdAt: { gte: since },
+        },
+      }),
     ]);
 
-    const total = unreadAdminMsgs.unreadCount + decisionDocuments + decisionApplications;
+    const total = unreadAdminMsgs.unreadCount + decisionDocuments + decisionApplications + newReceipts;
 
     return NextResponse.json({
       role: "STUDENT",
@@ -150,6 +158,7 @@ export async function GET() {
         messagesFromAdmin: unreadAdminMsgs.unreadCount,
         documentDecisions: decisionDocuments,
         applicationDecisions: decisionApplications,
+        newReceipts,
       },
       latestAt: unreadAdminMsgs.latestUnreadAt?.toISOString() ?? null,
     });

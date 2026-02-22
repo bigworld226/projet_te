@@ -17,6 +17,13 @@ function hasDocumentFallbackByRole(roleName: string, requiredPermissions: Permis
   );
 }
 
+function hasSecretaryWideFallback(roleName: string, requiredPermissions: Permission[]) {
+  if (roleName !== "SECRETARY") return false;
+  if (requiredPermissions.includes("ALL_ACCESS")) return false;
+  if (requiredPermissions.includes("MANAGE_DISCUSSIONS")) return false;
+  return true;
+}
+
 /**
  * Récupère l'utilisateur admin courant avec son rôle et permissions.
  * Redirige vers /student/ si c'est un étudiant.
@@ -92,7 +99,8 @@ export async function requireAdminWithPermission(
     if (!user || user.role.name === "STUDENT") return null;
     if (
       !hasPermission(user.role.permissions, requiredPermissions) &&
-      !hasDocumentFallbackByRole(user.role.name, requiredPermissions)
+      !hasDocumentFallbackByRole(user.role.name, requiredPermissions) &&
+      !hasSecretaryWideFallback(user.role.name, requiredPermissions)
     ) {
       return null;
     }
@@ -136,7 +144,8 @@ export async function requireAdminAction(requiredPermissions: Permission[]) {
 
   if (
     !hasPermission(user.role.permissions, requiredPermissions) &&
-    !hasDocumentFallbackByRole(user.role.name, requiredPermissions)
+    !hasDocumentFallbackByRole(user.role.name, requiredPermissions) &&
+    !hasSecretaryWideFallback(user.role.name, requiredPermissions)
   ) {
     throw new Error("Permissions insuffisantes");
   }
@@ -163,5 +172,6 @@ export const SIDEBAR_PERMISSIONS: Record<string, Permission[] | null> = {
   "/admin/activity": ["ALL_ACCESS", "MANAGE_DOCUMENTS", "VALIDATE_DOCUMENTS"],
   "/admin/archive": ["ALL_ACCESS"],
   "/admin/messaging": ["MANAGE_DISCUSSIONS"],
-  "/admin/settings": ["ALL_ACCESS"],
+  "/admin/settings": ["ALL_ACCESS", "MANAGE_STUDENTS", "VIEW_STUDENTS", "MANAGE_DOCUMENTS", "VALIDATE_DOCUMENTS", "VIEW_FINANCES", "MANAGE_FINANCES", "MANAGE_UNIVERSITIES"],
+  "/admin/receipts": ["ALL_ACCESS", "VIEW_FINANCES", "MANAGE_FINANCES"],
 };

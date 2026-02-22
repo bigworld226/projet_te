@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutGrid, Users, FileText, Globe, LogOut, ChevronLeft, ChevronRight, Menu, MessageSquare, Settings } from "lucide-react";
+import { LayoutGrid, Users, FileText, Globe, LogOut, ChevronLeft, ChevronRight, Menu, MessageSquare, Settings, Receipt } from "lucide-react";
 import { logoutAction } from "@/actions/logout.action";
 import { cn } from "@/lib/utils";
 
@@ -14,6 +14,7 @@ const MENU_ITEMS = [
   { label: 'Universités', href: '/admin/universities', icon: Globe },
   { label: 'Ajouter Université', href: '/admin/universities/new', icon: Globe },
   { label: 'Messagerie', href: '/messaging-admin', icon: MessageSquare },
+  { label: 'Reçus', href: '/admin/receipts', icon: Receipt },
   { label: 'Paramètres', href: '/admin/settings', icon: Settings },
 ];
 
@@ -61,11 +62,11 @@ export default function AdminSidebar({ user }: { user: any }) {
 
   // Filtrer les éléments de menu en fonction du rôle
   const filteredMenuItems = MENU_ITEMS.filter((item) => {
-    if (roleName === "STUDENT_MANAGER") {
-      return item.label === "Messagerie";
-    }
     if (["SECRETARY", "QUALITY_OFFICER"].includes(roleName) && item.label === "Messagerie") {
       return false;
+    }
+    if (item.label === "Reçus") {
+      return ["SUPERADMIN", "SECRETARY"].includes(roleName || "");
     }
     return true;
   });
@@ -183,7 +184,7 @@ export default function AdminSidebar({ user }: { user: any }) {
 
       {/* Sidebar */}
       <aside className={cn(
-        "bg-white fixed md:sticky top-0 h-screen shrink-0 border-r border-slate-100 shadow-sm transition-all duration-300",
+        "bg-white fixed md:sticky top-0 h-screen shrink-0 border-r border-slate-100 shadow-sm transition-all duration-300 overflow-hidden",
         isOpenMobile ? "left-0 w-72 z-[100]" : "-left-full md:left-0 md:z-50",
         isCollapsed ? "md:w-20" : "md:w-72"
       )}>
@@ -195,7 +196,7 @@ export default function AdminSidebar({ user }: { user: any }) {
           {isCollapsed ? <ChevronRight size={14}/> : <ChevronLeft size={14}/>} 
         </button>
 
-        <div className={cn("flex flex-col h-full", isCollapsed ? "p-4" : "p-8")}> 
+        <div className={cn("flex flex-col h-full min-h-0", isCollapsed ? "p-4" : "p-8")}> 
           {/* PROFILE SECTION */}
           <div className={cn("flex flex-col items-center mb-10 text-center transition-all duration-300", isCollapsed && "mb-8")}> 
             <div className={cn(
@@ -218,7 +219,10 @@ export default function AdminSidebar({ user }: { user: any }) {
             )} 
           </div> 
 
-          <nav className="space-y-1 flex-1">
+          <nav className={cn(
+            "space-y-1 flex-1 overflow-y-auto overflow-x-hidden min-h-0",
+            isCollapsed ? "pr-0" : "pr-1"
+          )}>
             {filteredMenuItems.map((item) => {
               const isActive = pathname.startsWith(item.href);
               return (
@@ -257,7 +261,7 @@ export default function AdminSidebar({ user }: { user: any }) {
           </nav>
 
           {/* LOGOUT */} 
-          <div className="pt-4 border-t border-slate-100 mt-auto"> 
+          <div className="pt-4 border-t border-slate-100 mt-auto bg-white"> 
             <button
               type="button"
               onClick={handleLogout}

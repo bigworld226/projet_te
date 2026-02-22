@@ -51,9 +51,14 @@ export function DocumentActions({ id, currentStatus }: DocumentActionsProps) {
 
   // État d'attente de vérification (Actions disponibles)
   return (
-    <div className="flex gap-2 items-center">
+    <div className="flex gap-2 items-center relative z-20 pointer-events-auto">
       <Button 
-        onClick={() => handleVerify('APPROVED')} 
+        type="button"
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          handleVerify('APPROVED');
+        }} 
         disabled={isPending}
         className={cn(
           "h-9 w-9 p-0 bg-white text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 border-2 border-slate-100 hover:border-emerald-200 rounded-xl transition-all shadow-sm",
@@ -65,7 +70,12 @@ export function DocumentActions({ id, currentStatus }: DocumentActionsProps) {
       </Button>
 
       <Button 
-        onClick={() => handleVerify('REJECTED')} 
+        type="button"
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          handleVerify('REJECTED');
+        }} 
         disabled={isPending}
         className={cn(
           "h-9 w-9 p-0 bg-white text-slate-400 hover:text-red-600 hover:bg-red-50 border-2 border-slate-100 hover:border-red-200 rounded-xl transition-all shadow-sm",
