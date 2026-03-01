@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Eye, FileText, Search, Filter, Globe, Banknote, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { DeleteStudentButton } from "@/components/admin/students/DeleteStudentButton";
+import { useMemo, useState } from "react";
 
 export default function AdminStudentsPage() {
   const { data: students = [], isLoading, error } = useQuery({
@@ -14,6 +15,69 @@ export default function AdminStudentsPage() {
       return res.data.users || [];
     }
   });
+  const [searchTerm, setSearchTerm] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
+  const [selectedCountry, setSelectedCountry] = useState("ALL");
+  const [selectedStatus, setSelectedStatus] = useState("ALL");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+
+  const availableCountries = useMemo(() => {
+    const countries = new Set<string>();
+    students.forEach((student: any) => {
+      (student.applications || []).forEach((app: any) => {
+        if (app?.country) countries.add(String(app.country));
+      });
+    });
+    return ["ALL", ...Array.from(countries).sort((a, b) => a.localeCompare(b))];
+  }, [students]);
+
+  const availableStatuses = useMemo(() => {
+    const statuses = new Set<string>();
+    students.forEach((student: any) => {
+      (student.applications || []).forEach((app: any) => {
+        if (app?.status) statuses.add(String(app.status));
+      });
+    });
+    return ["ALL", ...Array.from(statuses).sort((a, b) => a.localeCompare(b))];
+  }, [students]);
+
+  const filteredStudents = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+    const fromDate = dateFrom ? new Date(`${dateFrom}T00:00:00`) : null;
+    const toDate = dateTo ? new Date(`${dateTo}T23:59:59`) : null;
+
+    return students.filter((student: any) => {
+      const fullName = String(student.fullName || "").toLowerCase();
+      const email = String(student.email || "").toLowerCase();
+      const passport = String(student.passportNumber || "").toLowerCase();
+      const applications = student.applications || [];
+      const createdAt = new Date(student.createdAt);
+
+      const matchesSearch =
+        !query ||
+        fullName.includes(query) ||
+        email.includes(query) ||
+        passport.includes(query) ||
+        applications.some((app: any) => String(app.country || "").toLowerCase().includes(query));
+
+      const matchesCountry =
+        selectedCountry === "ALL" ||
+        applications.some((app: any) => String(app.country || "") === selectedCountry);
+
+      const matchesStatus =
+        selectedStatus === "ALL" ||
+        applications.some((app: any) => String(app.status || "") === selectedStatus);
+
+      const matchesDateFrom =
+        !fromDate || (!Number.isNaN(createdAt.getTime()) && createdAt >= fromDate);
+
+      const matchesDateTo =
+        !toDate || (!Number.isNaN(createdAt.getTime()) && createdAt <= toDate);
+
+      return matchesSearch && matchesCountry && matchesStatus && matchesDateFrom && matchesDateTo;
+    });
+  }, [students, searchTerm, selectedCountry, selectedStatus, dateFrom, dateTo]);
 
   if (isLoading) return <div className="p-12 text-center font-medium">Chargement des étudiants...</div>;
 
@@ -51,7 +115,7 @@ export default function AdminStudentsPage() {
         <div>
           <h1 className="text-3xl font-bold text-slate-800">Gestion des Étudiants</h1>
           <p className="text-slate-500 font-medium mt-1">
-            {students.length} étudiant{students.length > 1 ? 's' : ''} inscrit{students.length > 1 ? 's' : ''}
+            {filteredStudents.length} étudiant{filteredStudents.length > 1 ? 's' : ''} affiché{filteredStudents.length > 1 ? 's' : ''}
           </p>
         </div>
         
@@ -61,14 +125,90 @@ export default function AdminStudentsPage() {
                 <input 
                    type="text" 
                    placeholder="Rechercher un nom ou email..." 
+                   value={searchTerm}
+                   onChange={(e) => setSearchTerm(e.target.value)}
                    className="pl-10 pr-4 h-12 rounded-xl border-none shadow-sm bg-white text-sm font-medium focus:ring-2 focus:ring-blue-500 w-64 outline-none"
                 />
              </div>
-             <Button variant="outline" className="h-12 w-12 rounded-xl bg-white border-none shadow-sm text-slate-500 p-0 flex items-center justify-center">
+             <Button
+               variant="outline"
+               type="button"
+               onClick={() => setShowFilters((prev) => !prev)}
+               className={`h-12 w-12 rounded-xl border-none shadow-sm p-0 flex items-center justify-center transition-colors ${showFilters ? "bg-[#db9b16] text-white" : "bg-white text-slate-500"}`}
+             >
                 <Filter size={20} />
              </Button>
         </div>
       </header>
+
+      {showFilters && (
+        <div className="mb-6 bg-white border border-slate-100 rounded-2xl p-4 flex flex-col md:flex-row gap-3 md:items-end">
+          <div className="flex-1">
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Pays</label>
+            <select
+              value={selectedCountry}
+              onChange={(e) => setSelectedCountry(e.target.value)}
+              className="h-11 w-full rounded-xl bg-slate-50 border border-slate-200 px-3 text-sm font-medium text-slate-700 outline-none"
+            >
+              {availableCountries.map((country) => (
+                <option key={country} value={country}>
+                  {country === "ALL" ? "Tous les pays" : country}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex-1">
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Statut dossier</label>
+            <select
+              value={selectedStatus}
+              onChange={(e) => setSelectedStatus(e.target.value)}
+              className="h-11 w-full rounded-xl bg-slate-50 border border-slate-200 px-3 text-sm font-medium text-slate-700 outline-none"
+            >
+              {availableStatuses.map((status) => (
+                <option key={status} value={status}>
+                  {status === "ALL" ? "Tous les statuts" : status.replace(/_/g, " ")}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Inscrit depuis</label>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="h-11 rounded-xl bg-slate-50 border border-slate-200 px-3 text-sm font-medium text-slate-700 outline-none"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Inscrit jusqu'à</label>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="h-11 rounded-xl bg-slate-50 border border-slate-200 px-3 text-sm font-medium text-slate-700 outline-none"
+            />
+          </div>
+
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              setSelectedCountry("ALL");
+              setSelectedStatus("ALL");
+              setDateFrom("");
+              setDateTo("");
+              setSearchTerm("");
+            }}
+            className="h-11 rounded-xl"
+          >
+            Réinitialiser
+          </Button>
+        </div>
+      )}
 
       <div className="bg-white rounded-3xl shadow-sm border border-slate-100/50 overflow-hidden">
         <div className="overflow-x-auto">
@@ -84,7 +224,7 @@ export default function AdminStudentsPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-50">
-            {students.map((student: any) => (
+            {filteredStudents.map((student: any) => (
               <tr key={student.id} className="hover:bg-slate-50/50 transition-colors group">
                 <td className="py-4 px-6">
                   <div className="flex items-center gap-3">
@@ -154,6 +294,9 @@ export default function AdminStudentsPage() {
         </div>
         {students.length === 0 && (
            <div className="p-12 text-center text-slate-400">Aucun étudiant inscrit pour le moment.</div>
+        )}
+        {students.length > 0 && filteredStudents.length === 0 && (
+           <div className="p-12 text-center text-slate-400">Aucun étudiant ne correspond à la recherche/aux filtres.</div>
         )}
       </div>
     </main>
