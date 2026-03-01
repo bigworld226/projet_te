@@ -198,17 +198,29 @@ export async function GET(
       borderWidth: 1,
     });
 
-    const logoPath = path.join(process.cwd(), "public", "images", "logo.png");
+    const logoPdfPath = path.join(process.cwd(), "public", "images", "logo-receipt.pdf");
+    const logoPngPath = path.join(process.cwd(), "public", "images", "logo.png");
     try {
-      const logoBytes = await fs.readFile(logoPath);
-      const logo = await pdf.embedPng(logoBytes);
-      page.drawImage(logo, {
-        x: width - 208,
-        y: height - 134,
-        width: 128,
-        height: 100,
+      const logoPdfBytes = await fs.readFile(logoPdfPath);
+      const [embeddedLogoPage] = await pdf.embedPdf(logoPdfBytes, [0]);
+      page.drawPage(embeddedLogoPage, {
+        x: width - 212,
+        y: height - 136,
+        width: 132,
+        height: 104,
       });
-    } catch {}
+    } catch {
+      try {
+        const logoBytes = await fs.readFile(logoPngPath);
+        const logo = await pdf.embedPng(logoBytes);
+        page.drawImage(logo, {
+          x: width - 208,
+          y: height - 134,
+          width: 128,
+          height: 100,
+        });
+      } catch {}
+    }
 
     const topRef = `RCCM: BF-BBD-01-2025-B13-00999 - IFU: ${String(receiptNumber).padStart(7, "0")}`;
     page.drawText(pdfSafe(topRef), { x: 28, y: height - 44, font: bold, size: 8, color: rgb(0, 0, 0) });
