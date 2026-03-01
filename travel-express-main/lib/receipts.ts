@@ -32,10 +32,20 @@ export function parseReceiptDetails(details: string | null) {
 }
 
 export async function getNextReceiptNumber() {
+  const lastReset = await prisma.activityLog.findFirst({
+    where: {
+      action: "RECEIPT_COUNTER_RESET",
+      targetType: "RECEIPT_COUNTER",
+    },
+    select: { createdAt: true },
+    orderBy: { createdAt: "desc" },
+  });
+
   const generated = await prisma.activityLog.findMany({
     where: {
       targetType: "RECEIPT",
-      action: { in: ["RECEIPT_GENERATED", "RECEIPT_DELETED"] },
+      action: "RECEIPT_GENERATED",
+      ...(lastReset?.createdAt ? { createdAt: { gte: lastReset.createdAt } } : {}),
     },
     select: { details: true },
     take: 5000,
