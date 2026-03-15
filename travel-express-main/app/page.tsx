@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import HomeClient from "./HomeClient";
 import { authService } from "@/services/auth.service";
+import { isAdminRole } from "@/lib/roles";
 
 // On définit les types pour Next.js 15
 interface PageProps {
@@ -18,9 +19,9 @@ export default async function Page({ searchParams }: PageProps) {
   const isConnected = !!cookieStore.get('user_id') || !!session?.userId;
 
   // Rediriger les admins connectés vers leur dashboard
-  if (session?.role && session.role !== "STUDENT") {
+  if (session?.role && isAdminRole(session.role)) {
     redirect("/admin/dashboard");
   }
 
-  return <HomeClient isConnected={isConnected} isAdmin={!!session?.role && session.role !== "STUDENT"} />;
+  return <HomeClient isConnected={isConnected} isAdmin={!!session?.role && isAdminRole(session.role)} />;
 }

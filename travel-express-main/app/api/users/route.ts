@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyToken, hasPermission } from "@/lib/jwt";
 import { corsHeaders } from "@/lib/cors";
+import { getPrimaryUniversityIdForUser, getUniversityIdsForUsers } from "@/lib/university-scope";
 
 export async function OPTIONS() {
     return new Response(null, { headers: corsHeaders });
@@ -33,9 +34,10 @@ export async function GET(req: NextRequest) {
             ? tokenPayload.role 
             : (tokenPayload.role as any)?.name;
         
-        const isAdmin = ["SUPERADMIN", "QUALITY_OFFICER", "SECRETARY", "STUDENT_MANAGER"].includes(roleName);
+        const isAdmin = ["SUPERADMIN", "QUALITY_OFFICER", "SECRETARY", "STUDENT_MANAGER", "FINANCE_MANAGER"].includes(roleName);
+        const isMentor = roleName === "STUDENT_MENTOR";
 
-        if (!isAdmin) {
+        if (!isAdmin && !isMentor) {
             return NextResponse.json(
                 { message: "Accès refusé - Seuls les admins peuvent lister les utilisateurs" },
                 { status: 403, headers: corsHeaders }
@@ -59,7 +61,23 @@ export async function GET(req: NextRequest) {
             },
         });
 
-        return NextResponse.json(users, { headers: corsHeaders });
+        if (!isMentor) {
+            return NextResponse.json(users, { headers: corsHeaders });
+        }
+
+        const requesterUniversityId = await getPrimaryUniversityIdForUser(tokenPayload.id);
+        if (!requesterUniversityId) {
+            return NextResponse.json([], { headers: corsHeaders });
+        }
+
+        const universityByUser = await getUniversityIdsForUsers(users.map((u) => u.id));
+        const visible = users.filter((u) => {
+            if (u.id === tokenPayload.id) return false;
+            if (!["STUDENT", "STUDENT_MENTOR"].includes(u.role.name)) return false;
+            return universityByUser.get(u.id) === requesterUniversityId;
+        });
+
+        return NextResponse.json(visible, { headers: corsHeaders });
     } catch (err) {
         console.error("❌ Erreur GET /api/users:", err);
         return NextResponse.json(

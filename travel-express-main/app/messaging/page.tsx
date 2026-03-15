@@ -87,7 +87,7 @@ export default function MessagingPage() {
 
         // Passer le rôle à la fenêtre globale
         (window as any).USER_ROLE = userRole;
-        const isAdmin = ["SUPERADMIN", "STUDENT_MANAGER"].includes(userRole);
+        const isAdmin = ["SUPERADMIN", "STUDENT_MANAGER", "STUDENT_MENTOR"].includes(userRole);
         (window as any).IS_ADMIN_INTERFACE = isAdmin;
 
         // Vérifier si le script a déjà été chargé

@@ -2,11 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyToken } from "@/lib/jwt";
 import { prisma } from "@/lib/prisma";
 import { authService } from "@/services/auth.service";
+import { getPrimaryUniversityIdForUser, getUniversityIdsForUsers } from "@/lib/university-scope";
 
 type AuthenticatedUser = {
     id: string;
     roleName: string;
     isAdmin: boolean;
+    isMentor: boolean;
+    universityId: string | null;
 };
 
 async function authenticateRequester(req: NextRequest): Promise<AuthenticatedUser | null> {
@@ -25,6 +28,8 @@ async function authenticateRequester(req: NextRequest): Promise<AuthenticatedUse
                     id: user.id,
                     roleName,
                     isAdmin: roleName === "SUPERADMIN" || roleName === "STUDENT_MANAGER",
+                    isMentor: roleName === "STUDENT_MENTOR",
+                    universityId: await getPrimaryUniversityIdForUser(user.id),
                 };
             }
         }
@@ -43,6 +48,8 @@ async function authenticateRequester(req: NextRequest): Promise<AuthenticatedUse
         id: user.id,
         roleName,
         isAdmin: roleName === "SUPERADMIN" || roleName === "STUDENT_MANAGER",
+        isMentor: roleName === "STUDENT_MENTOR",
+        universityId: await getPrimaryUniversityIdForUser(user.id),
     };
 }
 
@@ -71,13 +78,16 @@ export async function GET(
         }
 
         // Enrichir avec les détails des membres
+        const memberDetails = await prisma.user.findMany({
+            where: { id: { in: group.members.map((m) => m.userId) } },
+            select: { id: true, fullName: true, email: true, role: { select: { name: true } } },
+        });
+        const mentor = memberDetails.find((m: any) => m.role?.name === "STUDENT_MENTOR");
         const enrichedGroup = {
             ...group,
             createdBy: group.createdBy,
-            memberDetails: await prisma.user.findMany({
-                where: { id: { in: group.members.map((m) => m.userId) } },
-                select: { id: true, fullName: true, email: true },
-            }),
+            memberDetails,
+            mentorName: mentor?.fullName || null,
             isMember: group.members.some((m) => m.userId === userId),
             canManage: isAdmin || group.createdBy === userId,
         };
@@ -101,6 +111,13 @@ export async function POST(
         const isAdmin = requester.isAdmin;
         const { memberIds } = await req.json();
 
+        if (requester.isMentor && !requester.universityId) {
+            return NextResponse.json(
+                { error: "Student Mentor sans université affectée." },
+                { status: 400 }
+            );
+        }
+
         if (!memberIds || memberIds.length === 0) {
             return NextResponse.json({ error: "At least one member required" }, { status: 400 });
         }
@@ -117,10 +134,33 @@ export async function POST(
 
         // Ajouter les nouveaux membres
         const existingMemberIds = group.members.map((m) => m.userId);
-        const newMemberIds = memberIds.filter((id: string) => !existingMemberIds.includes(id));
+        let newMemberIds = memberIds.filter((id: string) => !existingMemberIds.includes(id));
 
         if (newMemberIds.length === 0) {
             return NextResponse.json({ error: "All members already in group" }, { status: 400 });
+        }
+
+        if (requester.isMentor) {
+            const scopeIds = Array.from(new Set([userId, ...newMemberIds]));
+            const scopedUsers = await prisma.user.findMany({
+                where: { id: { in: scopeIds } },
+                select: { id: true, role: { select: { name: true } } },
+            });
+            const universityByUser = await getUniversityIdsForUsers(scopeIds);
+            const allowedIds = new Set(
+                scopedUsers
+                    .filter((u) => ["STUDENT", "STUDENT_MENTOR"].includes(u.role.name))
+                    .filter((u) => universityByUser.get(u.id) === requester.universityId)
+                    .map((u) => u.id)
+            );
+            const invalid = scopeIds.filter((id) => !allowedIds.has(id));
+            if (invalid.length > 0) {
+                return NextResponse.json(
+                    { error: "Tous les membres ajoutés doivent être de la même université que le mentor." },
+                    { status: 403 }
+                );
+            }
+            newMemberIds = newMemberIds.filter((id: string) => allowedIds.has(id));
         }
 
         await prisma.groupMember.createMany({
@@ -141,18 +181,25 @@ export async function POST(
         });
 
         // Enrichir avec l'info des membres (noms)
-        const enrichedGroup = updatedGroup ? {
-            ...updatedGroup,
-            createdBy: updatedGroup.createdBy,
-            memberDetails: await prisma.user.findMany({
+        const enrichedGroup = updatedGroup ? (() => {
+            const detailsPromise = prisma.user.findMany({
                 where: { id: { in: updatedGroup.members.map((m) => m.userId) } },
-                select: { id: true, fullName: true, email: true },
-            }),
-            isMember: updatedGroup.members.some((m) => m.userId === userId),
-            canManage: isAdmin || updatedGroup.createdBy === userId,
-        } : null;
+                select: { id: true, fullName: true, email: true, role: { select: { name: true } } },
+            });
+            return detailsPromise.then((memberDetails) => {
+                const mentor = memberDetails.find((m: any) => m.role?.name === "STUDENT_MENTOR");
+                return {
+                    ...updatedGroup,
+                    createdBy: updatedGroup.createdBy,
+                    memberDetails,
+                    mentorName: mentor?.fullName || null,
+                    isMember: updatedGroup.members.some((m) => m.userId === userId),
+                    canManage: isAdmin || updatedGroup.createdBy === userId,
+                };
+            });
+        })() : null;
 
-        return NextResponse.json(enrichedGroup, { status: 201 });
+        return NextResponse.json(await enrichedGroup, { status: 201 });
     } catch (error) {
         console.error("❌ Erreur POST /api/groups/[id]:", error);
         return NextResponse.json({ error: "Internal server error" }, { status: 500 });

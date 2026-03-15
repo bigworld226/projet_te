@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { authService } from "@/services/auth.service";
 import { redirect } from "next/navigation";
 import React from "react";
+import { isAdminRole } from "@/lib/roles";
 
 export default async function AdminLayout({
   children,
@@ -22,8 +23,8 @@ export default async function AdminLayout({
     } 
   });
 
-  // 3. Sécurité : Seuls les étudiants sont exclus
-  if (!user || user.role.name === 'STUDENT') {
+  // 3. Sécurité : seuls les rôles admin accèdent au back-office
+  if (!user || !isAdminRole(user.role.name)) {
     redirect('/student');
   }
 

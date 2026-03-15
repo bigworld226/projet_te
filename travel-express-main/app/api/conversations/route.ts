@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyToken, hasPermission } from "@/lib/jwt";
 import { corsHeaders } from "@/lib/cors";
+import { getPrimaryUniversityIdForUser } from "@/lib/university-scope";
 
 export async function OPTIONS() {
     return new Response(null, { headers: corsHeaders });
@@ -100,11 +101,31 @@ export async function POST(req: NextRequest) {
 
         // Vérifier que le participant existe
         const participantExists = await prisma.user.findUnique({
-            where: { id: participantId }
+            where: { id: participantId },
+            include: { role: { select: { name: true } } }
         });
 
         if (!participantExists) {
             return NextResponse.json({ message: "Participant introuvable" }, { status: 404, headers: corsHeaders });
+        }
+
+        if (tokenPayload.role.name === "STUDENT_MENTOR") {
+            if (!["STUDENT", "STUDENT_MENTOR"].includes(participantExists.role.name)) {
+                return NextResponse.json(
+                    { message: "Un mentor peut seulement discuter avec des étudiants/mentors" },
+                    { status: 403, headers: corsHeaders }
+                );
+            }
+            const [mentorUniversityId, participantUniversityId] = await Promise.all([
+                getPrimaryUniversityIdForUser(tokenPayload.id),
+                getPrimaryUniversityIdForUser(participantId),
+            ]);
+            if (!mentorUniversityId || !participantUniversityId || mentorUniversityId !== participantUniversityId) {
+                return NextResponse.json(
+                    { message: "Le contact doit être dans la même université que le mentor" },
+                    { status: 403, headers: corsHeaders }
+                );
+            }
         }
 
         // Créer la conversation

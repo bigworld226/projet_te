@@ -23,6 +23,7 @@ import { requireAdminAction } from "@/lib/permissions";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
+import { StudentEnrollmentType } from "@prisma/client";
 
 /**
  * Inscription d'un nouvel étudiant
@@ -31,6 +32,13 @@ export async function registerAction(prevState: any, formData: FormData) {
   const fullName = formData.get('fullName') as string;
   const email = formData.get('email') as string;
   const phone = formData.get('phone') as string;
+  const enrollmentTypeRaw = (formData.get('enrollmentType') as string) || "NEW_PROCEDURE";
+  const universityIdRaw = (formData.get("universityId") as string) || "";
+  const enrollmentType: StudentEnrollmentType =
+    enrollmentTypeRaw === "ALREADY_ABROAD_WITH_AGENCY"
+      ? "ALREADY_ABROAD_WITH_AGENCY"
+      : "NEW_PROCEDURE";
+  const universityId = universityIdRaw.trim() || null;
   const password = formData.get('password') as string;
 
   if (!email || !password || !fullName) {
@@ -39,6 +47,10 @@ export async function registerAction(prevState: any, formData: FormData) {
 
   if (password.length < 6) {
     return { error: "Le mot de passe doit faire au moins 6 caractères." };
+  }
+
+  if (enrollmentType === "ALREADY_ABROAD_WITH_AGENCY" && !universityId) {
+    return { error: "Veuillez sélectionner votre université." };
   }
 
   try {
@@ -55,6 +67,8 @@ export async function registerAction(prevState: any, formData: FormData) {
       password: hashedPassword,
       fullName,
       phone,
+      enrollmentType,
+      universityId,
     });
 
     // Créer session avec le nom du rôle et sessionVersion
@@ -78,7 +92,7 @@ export async function getAdminsAction() {
 
   const admins = await prisma.user.findMany({
     where: {
-      role: { name: { not: "STUDENT" } },
+      role: { name: { in: Array.from(new Set(["SUPERADMIN", "STUDENT_MANAGER", "QUALITY_OFFICER", "SECRETARY", "FINANCE_MANAGER"])) } },
     },
     select: {
       id: true,

@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { User, LogOut, FileText, Globe, MessageCircle, Settings } from "lucide-react";
 import { cn } from "@/lib/utils"; 
 import { useEffect, useState } from "react";
+import { isAdminRole } from "@/lib/roles";
 
 interface NavbarProps {
   isConnected: boolean;
@@ -47,16 +48,14 @@ const Navbar = ({ isConnected, userRole, userName }: NavbarProps) => {
     }
   };
 
-  // ✅ Ouvrir discussions sur /messaging-admin ou /messaging-student selon le rôle
+  // ✅ Ouvrir discussions sur /messaging (route unifiée qui choisit l'interface selon le rôle)
   const openMessaging = () => {
     if (!isConnected) return;
-    const isAdmin = ["SUPERADMIN", "STUDENT_MANAGER"].includes(userRole || "");
-    const messagingRoute = isAdmin ? "/messaging-admin" : "/messaging-student";
-    router.push(messagingRoute);
+    router.push("/messaging");
   };
 
   // Condition : si c'est un admin, on cache la navbar
-  const isAdmin = !!userRole && userRole !== "STUDENT";
+  const isAdmin = isAdminRole(userRole);
 
   useEffect(() => {
     if (!isConnected || isAdmin) return;

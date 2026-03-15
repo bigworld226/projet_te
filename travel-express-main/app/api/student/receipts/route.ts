@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { authService } from "@/services/auth.service";
 import { parseReceiptDetails } from "@/lib/receipts";
+import { isStudentLikeRole } from "@/lib/roles";
 
 export async function GET() {
   try {
@@ -22,7 +23,7 @@ export async function GET() {
     const where = {
       action: "RECEIPT_GENERATED",
       targetType: "RECEIPT",
-      ...(user.role.name === "STUDENT" ? { targetId: user.id } : {}),
+      ...(isStudentLikeRole(user.role.name) ? { targetId: user.id } : {}),
     };
 
     const logs = await prisma.activityLog.findMany({

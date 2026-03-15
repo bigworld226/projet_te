@@ -2,6 +2,7 @@
 
 import { registerAction } from "@/actions/auth.actions" 
 import { useActionState } from "react"
+import { useEffect, useState } from "react"
 import Link from 'next/link'
 import { Button } from "@/components/ui/Button"
 import { Input } from "@/components/ui/Input"
@@ -12,6 +13,22 @@ const initialState = {
 
 export default function RegisterPage() {
   const [state, formAction, isPending] = useActionState(registerAction, initialState)
+  const [enrollmentType, setEnrollmentType] = useState("NEW_PROCEDURE")
+  const [universities, setUniversities] = useState<Array<{ id: string; name: string; city: string; country: string }>>([])
+
+  useEffect(() => {
+    const loadUniversities = async () => {
+      try {
+        const res = await fetch("/api/public/universities", { cache: "no-store" })
+        if (!res.ok) return
+        const data = await res.json()
+        if (Array.isArray(data)) setUniversities(data)
+      } catch {
+        // no-op
+      }
+    }
+    loadUniversities()
+  }, [])
 
   return (
     <div className="min-h-screen flex w-full font-sans selection:bg-[#db9b16] selection:text-white">
@@ -89,6 +106,44 @@ export default function RegisterPage() {
               placeholder="ex: +226 70 00 00 00"
               className="bg-white focus:border-[#db9b16] focus:ring-[#db9b16]/10"
             />
+
+            <div className="space-y-2">
+              <label className="text-xs font-bold uppercase tracking-wide text-slate-600">
+                Situation Étudiante
+              </label>
+              <select
+                name="enrollmentType"
+                defaultValue="NEW_PROCEDURE"
+                onChange={(e) => setEnrollmentType(e.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none transition focus:border-[#db9b16] focus:ring-2 focus:ring-[#db9b16]/20"
+              >
+                <option value="NEW_PROCEDURE">Étudiant qui veut débuter une nouvelle procédure</option>
+                <option value="ALREADY_ABROAD_WITH_AGENCY">Étudiant qui étudie déjà à l&apos;extérieur grâce à l&apos;agence</option>
+              </select>
+            </div>
+
+            {enrollmentType === "ALREADY_ABROAD_WITH_AGENCY" && (
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase tracking-wide text-slate-600">
+                  Université actuelle
+                </label>
+                <select
+                  name="universityId"
+                  required
+                  defaultValue=""
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none transition focus:border-[#db9b16] focus:ring-2 focus:ring-[#db9b16]/20"
+                >
+                  <option value="" disabled>
+                    Sélectionnez votre université
+                  </option>
+                  {universities.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name} - {u.city} ({u.country})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             <Input 
               label="Mot de passe"

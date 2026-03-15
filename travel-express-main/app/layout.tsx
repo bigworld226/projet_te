@@ -8,6 +8,7 @@ import { UserInitializer } from "@/components/UserInitializer";
 import AppToaster from "@/components/AppToaster";
 import { prisma } from "@/lib/prisma"; // Assure-toi d'avoir cet import
 import { authService } from "@/services/auth.service";
+import { isAdminRole } from "@/lib/roles";
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -44,7 +45,7 @@ if (userId) {
    
   })
 }
-const isAdmin = userData?.role?.name !== 'STUDENT' && userData?.role?.name != null;
+const isAdmin = isAdminRole(userData?.role?.name);
 
 console.log('userdata',userData,"userid",userId)
   return (

@@ -1116,7 +1116,7 @@ async function initializeUser() {
         console.log("🔑 Token trouvé:", token && token !== "COOKIES_AUTO" ? "OUI ✅" : "NON ❌ (utilisant cookies)");
 
         // Déterminer si ADMIN ou STUDENT
-        window.isAdminUser = ["SUPERADMIN", "STUDENT_MANAGER"].includes(currentUser.role?.name);
+        window.isAdminUser = ["SUPERADMIN", "STUDENT_MANAGER", "STUDENT_MENTOR"].includes(currentUser.role?.name);
         
         // ✅ IMPORTANT: Mettre à jour la variable globale qui sera utilisée dans switchTab
         isAdminUser = window.isAdminUser;
@@ -1260,7 +1260,7 @@ async function chargerContactsAdmin() {
 // CHARGER CONVERSATIONS (CORRIGÉ POUR LES COOKIES)
 // ============================================================
 function chargerConversations() {
-    const hasAccess = isAdminUser || currentUser?.role?.name === "STUDENT";
+    const hasAccess = isAdminUser || ["STUDENT", "STUDENT_MENTOR"].includes(currentUser?.role?.name);
     const chatListId = getChatListId();
     const chatList = document.getElementById(chatListId);
     
@@ -3357,7 +3357,8 @@ async function chargerGroupesList() {
                  onmouseout="this.style.background='transparent'">
                 <strong style="color:var(--gold);">📱 ${group.name}</strong>
                 <small style="display:block; margin-top:4px; color:var(--text-muted);">
-                    Membres: ${group.memberDetails?.length || 0}
+                    Mentor: ${group.mentorName || "Non défini"}<br>
+                    Membres: ${(group.memberDetails || []).map(m => m.fullName).join(', ') || (group.memberDetails?.length || 0)}
                     ${group.canManage ? '<button onclick="event.stopPropagation(); window.supprimerGroupe(\'' + group.id + '\', \'' + group.name + '\')" style="float:right; padding:4px 8px; background:red; border:none; border-radius:4px; color:white; cursor:pointer; font-size:11px;">Supprimer</button>' : ''}
                 </small>
             </div>
@@ -3467,7 +3468,8 @@ async function chargerGroupes() {
                     <strong style="color:var(--gold);">📱 ${group.name}</strong>
                     <small style="display:block; margin-top:4px;">
                         Créé par: ${group.creator.fullName}<br>
-                        Membres: ${group.memberDetails?.length || 0}
+                        Mentor: ${group.mentorName || "Non défini"}<br>
+                        Membres: ${(group.memberDetails || []).map(m => m.fullName).join(', ') || (group.memberDetails?.length || 0)}
                     </small>
                 </div>
             `).join('');

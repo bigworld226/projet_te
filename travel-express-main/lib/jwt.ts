@@ -111,6 +111,15 @@ function getPermissionsForRole(roleName?: string): string[] {
             'GROUP.EDIT',
             'GROUP.DELETE',
         ],
+        'STUDENT_MENTOR': [
+            'CONVERSATION.READ',
+            'CONVERSATION.CREATE',
+            'MESSAGE.READ',
+            'MESSAGE.SEND',
+            'GROUP.CREATE',
+            'GROUP.EDIT',
+            'GROUP.DELETE',
+        ],
         'STUDENT': [
             'CONVERSATION.READ',
             'MESSAGE.READ',

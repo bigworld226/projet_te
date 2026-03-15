@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { authService } from "@/services/auth.service";
+import { isAdminRole } from "@/lib/roles";
 
 export async function GET() {
   const session = await authService.getSession();
@@ -13,7 +14,7 @@ export async function GET() {
     select: { id: true, role: { select: { name: true } } },
   });
 
-  if (!currentUser || currentUser.role.name === "STUDENT") {
+  if (!currentUser || !isAdminRole(currentUser.role.name)) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
   }
 
@@ -21,7 +22,7 @@ export async function GET() {
   const admins =
     currentUser.role.name === "SUPERADMIN"
       ? await prisma.user.findMany({
-          where: { role: { name: { not: "STUDENT" } } },
+          where: { role: { name: { in: ["SUPERADMIN", "STUDENT_MANAGER", "QUALITY_OFFICER", "SECRETARY", "FINANCE_MANAGER"] } } },
           select: { id: true, fullName: true, email: true, role: { select: { name: true } } },
         })
       : [];

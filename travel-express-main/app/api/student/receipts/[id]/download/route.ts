@@ -186,7 +186,7 @@ export async function GET(
       y: height - 140,
       width: 300,
       height: 110,
-      color: rgb(0.96, 0.96, 0.96),
+      color: rgb(1, 1, 1),
     });
     page.drawRectangle({
       x: 322,
@@ -194,23 +194,31 @@ export async function GET(
       width: width - 344,
       height: 110,
       color: rgb(1, 1, 1),
-      borderColor: rgb(0, 0, 0),
-      borderWidth: 1,
     });
 
+    const logoTransparentPath = path.join(process.cwd(), "public", "images", "logo-receipt.png");
     const logoPdfPath = path.join(process.cwd(), "public", "images", "logo-receipt.pdf");
     const logoPngPath = path.join(process.cwd(), "public", "images", "logo.png");
     try {
-      const logoPdfBytes = await fs.readFile(logoPdfPath);
-      const [embeddedLogoPage] = await pdf.embedPdf(logoPdfBytes, [0]);
-      page.drawPage(embeddedLogoPage, {
-        x: width - 212,
+      const logoTransparentBytes = await fs.readFile(logoTransparentPath);
+      const logo = await pdf.embedPng(logoTransparentBytes);
+      page.drawImage(logo, {
+        x: width - 210,
         y: height - 136,
-        width: 132,
+        width: 130,
         height: 104,
       });
     } catch {
       try {
+        const logoPdfBytes = await fs.readFile(logoPdfPath);
+        const [embeddedLogoPage] = await pdf.embedPdf(logoPdfBytes, [0]);
+        page.drawPage(embeddedLogoPage, {
+          x: width - 212,
+          y: height - 136,
+          width: 132,
+          height: 104,
+        });
+      } catch {
         const logoBytes = await fs.readFile(logoPngPath);
         const logo = await pdf.embedPng(logoBytes);
         page.drawImage(logo, {
@@ -219,7 +227,7 @@ export async function GET(
           width: 128,
           height: 100,
         });
-      } catch {}
+      }
     }
 
     const topRef = `RCCM: BF-BBD-01-2025-B13-00999 - IFU: ${String(receiptNumber).padStart(7, "0")}`;
@@ -237,16 +245,20 @@ export async function GET(
       color: rgb(0, 0, 0),
     });
 
-    // Meta
-    page.drawText(pdfSafe(`Adresse : Bobo-Dioulasso`), { x: 90, y: height - 194, font, size: 9, color: rgb(0, 0, 0) });
-    page.drawText(pdfSafe(`Date : ${new Date(issuedAt).toLocaleDateString("fr-FR")}`), { x: 90, y: height - 212, font, size: 9, color: rgb(0, 0, 0) });
-    page.drawText(pdfSafe(`Email : ${details?.recipientEmail || "-"}`), { x: 90, y: height - 230, font, size: 8, color: rgb(0, 0, 0) });
-    page.drawText(pdfSafe(`Tel : +226 66604952 / 51359249`), { x: 90, y: height - 248, font, size: 9, color: rgb(0, 0, 0) });
+    // Meta blocks aligned under their top sections
+    const metaLeftX = 34;
+    const metaRightX = 410;
+    const metaY = height - 194;
 
-    page.drawText(pdfSafe(`Nom : ${name}`), { x: 355, y: height - 194, font, size: 9, color: rgb(0, 0, 0) });
-    page.drawText(pdfSafe(`Type : ${type}`), { x: 355, y: height - 212, font, size: 9, color: rgb(0, 0, 0) });
-    page.drawText(pdfSafe(`Adresse : Bobo-Dioulasso`), { x: 355, y: height - 230, font, size: 9, color: rgb(0, 0, 0) });
-    page.drawText(pdfSafe(`Tel : (+226) 62626320`), { x: 355, y: height - 248, font, size: 9, color: rgb(0, 0, 0) });
+    page.drawText(pdfSafe(`Adresse : Bobo-Dioulasso`), { x: metaLeftX, y: metaY, font, size: 9, color: rgb(0, 0, 0) });
+    page.drawText(pdfSafe(`Date : ${new Date(issuedAt).toLocaleDateString("fr-FR")}`), { x: metaLeftX, y: metaY - 18, font, size: 9, color: rgb(0, 0, 0) });
+    page.drawText(pdfSafe(`Email : ${details?.recipientEmail || "-"}`), { x: metaLeftX, y: metaY - 36, font, size: 8, color: rgb(0, 0, 0) });
+    page.drawText(pdfSafe(`Tel : +226 66604952 / 51359249`), { x: metaLeftX, y: metaY - 54, font, size: 9, color: rgb(0, 0, 0) });
+
+    page.drawText(pdfSafe(`Nom : ${name}`), { x: metaRightX, y: metaY, font, size: 9, color: rgb(0, 0, 0) });
+    page.drawText(pdfSafe(`Type : ${type}`), { x: metaRightX, y: metaY - 18, font, size: 9, color: rgb(0, 0, 0) });
+    page.drawText(pdfSafe(`Adresse : Bobo-Dioulasso`), { x: metaRightX, y: metaY - 36, font, size: 9, color: rgb(0, 0, 0) });
+    page.drawText(pdfSafe(`Tel : (+226) 62626320`), { x: metaRightX, y: metaY - 54, font, size: 9, color: rgb(0, 0, 0) });
 
     // Table
     const tableX = 86;

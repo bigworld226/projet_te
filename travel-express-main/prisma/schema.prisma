@@ -69,6 +69,11 @@ enum DocumentStatus {
   REJECTED
 }
 
+enum StudentEnrollmentType {
+  NEW_PROCEDURE
+  ALREADY_ABROAD_WITH_AGENCY
+}
+
 // --- UTILISATEURS & IAM ---
 
 model User {
@@ -77,6 +82,7 @@ model User {
   password         String 
   fullName         String? 
   phone            String?
+  enrollmentType   StudentEnrollmentType @default(NEW_PROCEDURE)
   profileImage     String?   // URL de la photo de profil
 
   // IAM Link

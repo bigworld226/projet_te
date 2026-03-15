@@ -34,6 +34,11 @@ type ReceiptItem = {
   note: string;
 };
 
+function formatMoney(value?: number | null) {
+  if (typeof value !== "number") return null;
+  return `${value.toLocaleString("fr-FR")} XOF`;
+}
+
 export default function AdminReceiptsPage() {
   const [students, setStudents] = useState<Student[]>([]);
   const [templates, setTemplates] = useState<ReceiptTemplate[]>([]);
@@ -346,46 +351,70 @@ export default function AdminReceiptsPage() {
             {receipts.length === 0 ? (
               <p className="text-slate-500">Aucun reçu généré pour le moment.</p>
             ) : (
-              receipts.map((receipt) => (
-                <div key={receipt.id} className="border border-slate-100 rounded-2xl p-4 flex items-center justify-between gap-4 flex-wrap">
-                  <div className="min-w-0">
-                    <p className="font-semibold text-slate-900">
-                      #{receipt.receiptNumber ?? "-"} - {receipt.receiptType}
-                    </p>
-                    <p className="text-sm text-slate-500 break-words">
-                      {receipt.recipientName || receipt.recipientEmail} - {new Date(receipt.createdAt).toLocaleString("fr-FR")}
-                    </p>
-                    <p className="text-sm text-slate-700">Modèle: {receipt.templateName}</p>
-                    {receipt.amount !== null && <p className="text-sm text-slate-700">Montant: {receipt.amount.toLocaleString("fr-FR")} XOF</p>}
-                    {typeof receipt.amountPaid === "number" && (
-                      <p className="text-sm text-slate-700">
-                        Montant versé: {receipt.amountPaid.toLocaleString("fr-FR")} XOF
-                      </p>
-                    )}
-                    {typeof receipt.remainingAmount === "number" && (
-                      <p className="text-sm text-slate-700">
-                        Reste à verser: {receipt.remainingAmount.toLocaleString("fr-FR")} XOF
-                      </p>
+              receipts.map((receipt) => {
+                const total = formatMoney(receipt.amount);
+                const paid = formatMoney(receipt.amountPaid);
+                const remaining = formatMoney(receipt.remainingAmount);
+                const recipient = receipt.recipientName || receipt.recipientEmail;
+                return (
+                  <div key={receipt.id} className="border border-slate-100 rounded-2xl p-4 md:p-5">
+                    <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                      <div className="min-w-0 space-y-1">
+                        <p className="text-base md:text-lg font-bold text-slate-900">
+                          Reçu N°{String(receipt.receiptNumber ?? "-").padStart(4, "0")} - {receipt.receiptType}
+                        </p>
+                        <p className="text-sm md:text-base text-slate-700 break-words">
+                          Destinataire: <span className="font-semibold">{recipient}</span>
+                        </p>
+                        <p className="text-sm text-slate-500">
+                          Date: {new Date(receipt.createdAt).toLocaleString("fr-FR")}
+                        </p>
+                        <p className="text-sm text-slate-500">Modèle: {receipt.templateName}</p>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <a
+                          href={`/api/student/receipts/${receipt.id}/download`}
+                          className="h-10 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 inline-flex items-center gap-2 text-sm font-medium"
+                        >
+                          <Download size={15} />
+                          Télécharger
+                        </a>
+                        {canDeleteGeneratedReceipts && (
+                          <button
+                            onClick={() => handleDeleteReceipt(receipt.id)}
+                            className="h-10 px-3 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 inline-flex items-center gap-2 text-sm font-medium"
+                            title="Supprimer ce reçu"
+                          >
+                            <Trash2 size={15} />
+                            Supprimer
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {(total || paid || remaining) && (
+                      <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        {total && (
+                          <div className="rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-800">
+                            Total: <span className="font-semibold">{total}</span>
+                          </div>
+                        )}
+                        {paid && (
+                          <div className="rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+                            Versé: <span className="font-semibold">{paid}</span>
+                          </div>
+                        )}
+                        {remaining && (
+                          <div className="rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                            Reste: <span className="font-semibold">{remaining}</span>
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <a href={`/api/student/receipts/${receipt.id}/download`} className="h-10 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 inline-flex items-center gap-2 text-sm font-medium">
-                      <Download size={15} />
-                      Télécharger
-                    </a>
-                    {canDeleteGeneratedReceipts && (
-                      <button
-                        onClick={() => handleDeleteReceipt(receipt.id)}
-                        className="h-10 px-3 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 inline-flex items-center gap-2 text-sm font-medium"
-                        title="Supprimer ce reçu"
-                      >
-                        <Trash2 size={15} />
-                        Supprimer
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
           {!canDeleteGeneratedReceipts && (

@@ -40,7 +40,7 @@ export async function GET(request: Request) {
             members: {
               include: {
                 user: {
-                  select: { id: true, fullName: true, profileImage: true }
+                  select: { id: true, fullName: true, profileImage: true, role: { select: { name: true } } }
                 }
               }
             }
@@ -49,14 +49,23 @@ export async function GET(request: Request) {
       }
     });
 
-    const formattedGroups = groups.map((gm: any) => ({
-      id: gm.group.id,
-      name: gm.group.name,
-      creator: gm.group.creator,
-      memberCount: gm.group.members.length,
-      // ❌ Ne pas envoyer les noms des autres membres aux étudiants pour des raisons de privacy
-      createdAt: gm.group.createdAt
-    }));
+    const formattedGroups = groups.map((gm: any) => {
+      const mentorMember =
+        gm.group.members.find((m: any) => m.user?.role?.name === "STUDENT_MENTOR")?.user || null;
+      return {
+        id: gm.group.id,
+        name: gm.group.name,
+        creator: gm.group.creator,
+        memberCount: gm.group.members.length,
+        mentorName: mentorMember?.fullName || null,
+        members: gm.group.members.map((m: any) => ({
+          id: m.user.id,
+          fullName: m.user.fullName,
+          role: m.user.role?.name || "STUDENT",
+        })),
+        createdAt: gm.group.createdAt
+      };
+    });
 
     return NextResponse.json({ groups: formattedGroups }, {
       headers: corsHeaders

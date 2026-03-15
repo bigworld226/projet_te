@@ -13,6 +13,7 @@ async function main() {
   const PWD_STUDENT_MANAGER = 'student_manager'
   const PWD_SECRETARY = 'secretaire'
   const PWD_STUDENT = 'student123'
+  const PWD_STUDENT_MENTOR = 'mentor123'
 
   const salt = bcrypt.genSaltSync(10)
   const hashAdmin = bcrypt.hashSync(PWD_ADMIN, salt)
@@ -20,11 +21,13 @@ async function main() {
   const hashStudentManager = bcrypt.hashSync(PWD_STUDENT_MANAGER, salt)
   const hashSecretary = bcrypt.hashSync(PWD_SECRETARY, salt)
   const hashStudent = bcrypt.hashSync(PWD_STUDENT, salt)
+  const hashStudentMentor = bcrypt.hashSync(PWD_STUDENT_MENTOR, salt)
 
   // 1. Création des Rôles (IAM)
   const roles = [
     { name: 'SUPERADMIN', desc: 'Accès total', perms: [Permission.ALL_ACCESS] },
     { name: 'STUDENT', desc: 'Espace étudiant', perms: [] },
+    { name: 'STUDENT_MENTOR', desc: 'Mentor étudiant par université', perms: [Permission.MANAGE_DISCUSSIONS] },
     { name: 'STUDENT_MANAGER', desc: 'Gère les dossiers', perms: [Permission.MANAGE_STUDENTS, Permission.VIEW_STUDENTS,Permission.MANAGE_DISCUSSIONS] },
     { name: 'QUALITY_OFFICER', desc: 'Vérifie les docs', perms: [Permission.MANAGE_DOCUMENTS, Permission.VALIDATE_DOCUMENTS] },
     { name: 'FINANCE_MANAGER', desc: 'Gère les sous', perms: [Permission.VIEW_FINANCES, Permission.MANAGE_FINANCES, Permission.VIEW_STUDENTS] },
@@ -114,6 +117,18 @@ async function main() {
     },
   })
 
+  // STUDENT MENTOR DE TEST
+  const mentorStudent = await prisma.user.upsert({
+    where: { email: 'mentor@agence.com' },
+    update: { password: hashStudentMentor },
+    create: {
+      email: 'mentor@agence.com',
+      password: hashStudentMentor,
+      fullName: 'Student Mentor',
+      roleId: createdRoles['STUDENT_MENTOR'],
+    },
+  })
+
   // 4. Dossier et Conversation pour l'étudiant
   const app = await prisma.application.create({
     data: {
@@ -123,6 +138,16 @@ async function main() {
       progress: 30,
       paymentStatus: PaymentStatus.PENDING,
     }
+  })
+
+  await prisma.application.create({
+    data: {
+      userId: mentorStudent.id,
+      universityId: uni1.id,
+      status: ApplicationStatus.ACCEPTED,
+      progress: 100,
+      paymentStatus: PaymentStatus.COMPLETED,
+    },
   })
 
   await prisma.conversation.create({
@@ -145,6 +170,7 @@ async function main() {
     { Rôle: 'Secrétaire', Email: 'secretaire@gmail.com', Password: PWD_SECRETARY },
     { Rôle: 'Qualité', Email: 'qualite@agence.com', Password: PWD_QUALITY },
     { Rôle: 'Étudiant', Email: 'etudiant@test.com', Password: PWD_STUDENT },
+    { Rôle: 'Student Mentor', Email: 'mentor@agence.com', Password: PWD_STUDENT_MENTOR },
   ])
   console.log('='.repeat(50) + '\n')
 }

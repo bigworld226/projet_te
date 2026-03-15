@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma"
+import { StudentEnrollmentType } from "@prisma/client";
 
 export const userService = {
   /**
@@ -16,16 +17,48 @@ export const userService = {
    * Crée un étudiant avec gestion des types Prisma
    * On connecte le rôle "STUDENT" par son nom unique
    */
-  async createStudent(data: { email: string; password: string; fullName: string; phone?: string | null }) {
-    return prisma.user.create({
-      data: {
-        email: data.email.toLowerCase().trim(),
-        password: data.password,
-        fullName: data.fullName.trim(),
-        phone: data.phone,
-        role: { connect: { name: 'STUDENT' } },
-      },
-      include: { role: true },
+  async createStudent(data: {
+    email: string;
+    password: string;
+    fullName: string;
+    phone?: string | null;
+    enrollmentType?: StudentEnrollmentType;
+    universityId?: string | null;
+  }) {
+    return prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: {
+          email: data.email.toLowerCase().trim(),
+          password: data.password,
+          fullName: data.fullName.trim(),
+          phone: data.phone,
+          enrollmentType: data.enrollmentType || "NEW_PROCEDURE",
+          role: { connect: { name: "STUDENT" } },
+        },
+        include: { role: true },
+      });
+
+      if (data.enrollmentType === "ALREADY_ABROAD_WITH_AGENCY" && data.universityId) {
+        const university = await tx.university.findUnique({
+          where: { id: data.universityId },
+          select: { country: true },
+        });
+
+        if (university) {
+          await tx.application.create({
+            data: {
+              userId: user.id,
+              universityId: data.universityId,
+              country: university.country || "Chine",
+              status: "ACCEPTED",
+              progress: 100,
+              paymentStatus: "COMPLETED",
+            },
+          });
+        }
+      }
+
+      return user;
     });
   },
   

@@ -62,9 +62,12 @@ export async function GET(
       return NextResponse.json({ error: "Conversation non trouvée" }, { status: 404 });
     }
 
-    // Tous les admins avec MANAGE_DISCUSSIONS peuvent voir le détail
+    const isMentor = admin.role.name === "STUDENT_MENTOR";
     // Mettre à jour le lastRead du participant si applicable
     const isParticipant = conversation.participants.some(p => p.userId === admin.id);
+    if (isMentor && !isParticipant) {
+      return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+    }
     if (isParticipant) {
       await prisma.conversationParticipant.updateMany({
         where: { conversationId: id, userId: admin.id },
@@ -113,8 +116,11 @@ export async function POST(
       return NextResponse.json({ error: "Conversation non trouvée" }, { status: 404 });
     }
 
-    // Tous les admins avec MANAGE_DISCUSSIONS peuvent envoyer un message
+    const isMentor = admin.role.name === "STUDENT_MENTOR";
     const isParticipant = conversation.participants.some(p => p.userId === admin.id);
+    if (isMentor && !isParticipant) {
+      return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+    }
     if (!isParticipant) {
       await prisma.conversationParticipant.create({
         data: { conversationId: id, userId: admin.id },
@@ -172,6 +178,10 @@ export async function DELETE(
 
     if (!conversation) {
       return NextResponse.json({ error: "Conversation non trouvée" }, { status: 404 });
+    }
+
+    if (admin.role.name === "STUDENT_MENTOR") {
+      return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
     }
 
     // Supprimer tous les messages d'abord

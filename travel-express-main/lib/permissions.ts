@@ -2,12 +2,18 @@ import { prisma } from "@/lib/prisma";
 import { authService } from "@/services/auth.service";
 import { Permission } from "@prisma/client";
 import { redirect } from "next/navigation";
+import { isAdminRole } from "@/lib/roles";
 
-const MESSAGING_ALLOWED_ROLES = new Set(["SUPERADMIN", "STUDENT_MANAGER"]);
+const MESSAGING_ALLOWED_ROLES = new Set(["SUPERADMIN", "STUDENT_MANAGER", "STUDENT_MENTOR"]);
 const DOCUMENT_FALLBACK_ROLES = new Set(["SECRETARY", "QUALITY_OFFICER"]);
 
 function canUseMessagingRole(roleName: string) {
   return MESSAGING_ALLOWED_ROLES.has(roleName);
+}
+
+function isMentorMessagingOnly(roleName: string, requiredPermissions: Permission[]) {
+  if (roleName !== "STUDENT_MENTOR") return false;
+  return requiredPermissions.length > 0 && requiredPermissions.every((p) => p === "MANAGE_DISCUSSIONS");
 }
 
 function hasDocumentFallbackByRole(roleName: string, requiredPermissions: Permission[]) {
@@ -46,7 +52,7 @@ export async function getAdminUser() {
     },
   });
 
-  if (!user || user.role.name === "STUDENT") {
+  if (!user || !isAdminRole(user.role.name)) {
     redirect("/student/");
   }
 
@@ -96,11 +102,14 @@ export async function requireAdminWithPermission(
       },
     });
 
-    if (!user || user.role.name === "STUDENT") return null;
+    if (!user) return null;
+    const allowMentorMessaging = isMentorMessagingOnly(user.role.name, requiredPermissions);
+    if (!isAdminRole(user.role.name) && !allowMentorMessaging) return null;
     if (
       !hasPermission(user.role.permissions, requiredPermissions) &&
       !hasDocumentFallbackByRole(user.role.name, requiredPermissions) &&
-      !hasSecretaryWideFallback(user.role.name, requiredPermissions)
+      !hasSecretaryWideFallback(user.role.name, requiredPermissions) &&
+      !allowMentorMessaging
     ) {
       return null;
     }
@@ -138,14 +147,20 @@ export async function requireAdminAction(requiredPermissions: Permission[]) {
     },
   });
 
-  if (!user || user.role.name === "STUDENT") {
+  if (!user) {
+    redirect("/student/");
+  }
+
+  const allowMentorMessaging = isMentorMessagingOnly(user.role.name, requiredPermissions);
+  if (!isAdminRole(user.role.name) && !allowMentorMessaging) {
     redirect("/student/");
   }
 
   if (
     !hasPermission(user.role.permissions, requiredPermissions) &&
     !hasDocumentFallbackByRole(user.role.name, requiredPermissions) &&
-    !hasSecretaryWideFallback(user.role.name, requiredPermissions)
+    !hasSecretaryWideFallback(user.role.name, requiredPermissions) &&
+    !allowMentorMessaging
   ) {
     throw new Error("Permissions insuffisantes");
   }

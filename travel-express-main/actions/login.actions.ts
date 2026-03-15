@@ -4,6 +4,7 @@ import { userService } from "@/services/user.service";
 import { authService } from "@/services/auth.service";
 import { redirect } from "next/navigation";
 import bcrypt from "bcryptjs";
+import { isAdminRole } from "@/lib/roles";
 
 export async function loginAction(prevState: any, formData: FormData) {
   const email = formData.get('email') as string;
@@ -37,7 +38,7 @@ export async function loginAction(prevState: any, formData: FormData) {
     await authService.createSession(user.id, user.role.name, userWithVersion?.sessionVersion);
 
     // 5. Redirection selon le rôle
-    if (user.role.name === 'STUDENT') {
+    if (!isAdminRole(user.role.name)) {
       redirect('/student/dashboard');
     } else {
       redirect('/admin/dashboard');

@@ -1,6 +1,29 @@
 import { verifyToken } from "@/lib/jwt";
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
+import { getPrimaryUniversityIdForUser } from "@/lib/university-scope";
+
+async function getAdvisorForStudent(userId: string) {
+    const studentUniversityId = await getPrimaryUniversityIdForUser(userId);
+    let advisor = studentUniversityId
+        ? await prisma.user.findFirst({
+              where: {
+                  role: { name: "STUDENT_MENTOR" },
+                  applications: { some: { universityId: studentUniversityId } },
+              },
+              select: { id: true, fullName: true, email: true },
+          })
+        : null;
+
+    if (!advisor) {
+        advisor = await prisma.user.findFirst({
+            where: { role: { name: "SUPERADMIN" } },
+            select: { id: true, fullName: true, email: true },
+        });
+    }
+
+    return advisor;
+}
 
 /**
  * GET /api/student/admin/messages
@@ -26,22 +49,10 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({ success: false, message: "Invalid token payload" }, { status: 401 });
         }
 
-        // Find Super Admin
-        const superAdmin = await prisma.user.findFirst({
-            where: {
-                role: {
-                    name: "SUPERADMIN"
-                }
-            },
-            select: {
-                id: true,
-                fullName: true,
-                email: true
-            }
-        });
+        const superAdmin = await getAdvisorForStudent(userId);
 
         if (!superAdmin) {
-            return NextResponse.json({ success: false, message: "Super Admin not found" }, { status: 404 });
+            return NextResponse.json({ success: false, message: "Conseiller introuvable" }, { status: 404 });
         }
 
         // Find or create conversation with Super Admin
@@ -62,7 +73,7 @@ export async function GET(req: NextRequest) {
         if (!conversation) {
             conversation = await prisma.conversation.create({
                 data: {
-                    subject: `Conversation avec ${superAdmin.fullName}`,
+                    subject: `Conversation avec ${superAdmin.fullName || "Conseiller"}`,
                     participants: {
                         create: [
                             { userId },
@@ -155,20 +166,10 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ success: false, message: "Message content is required" }, { status: 400 });
         }
 
-        // Find Super Admin
-        const superAdmin = await prisma.user.findFirst({
-            where: {
-                role: {
-                    name: "SUPERADMIN"
-                }
-            },
-            select: {
-                id: true
-            }
-        });
+        const superAdmin = await getAdvisorForStudent(userId);
 
         if (!superAdmin) {
-            return NextResponse.json({ success: false, message: "Super Admin not found" }, { status: 404 });
+            return NextResponse.json({ success: false, message: "Conseiller introuvable" }, { status: 404 });
         }
 
         // Find or create conversation
@@ -188,7 +189,7 @@ export async function POST(req: NextRequest) {
         if (!conversation) {
             conversation = await prisma.conversation.create({
                 data: {
-                    subject: "Conversation avec l'Assistant Social",
+                    subject: "Conversation avec votre conseiller",
                     participants: {
                         create: [
                             { userId },

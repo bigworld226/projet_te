@@ -1098,7 +1098,7 @@ async function initializeUser() {
         console.log("🔑 Token trouvé:", token && token !== "COOKIES_AUTO" ? "OUI ✅" : "NON ❌ (utilisant cookies)");
 
         // Déterminer si ADMIN ou STUDENT
-        window.isAdminUser = ["SUPERADMIN", "STUDENT_MANAGER"].includes(currentUser.role?.name);
+        window.isAdminUser = ["SUPERADMIN", "STUDENT_MANAGER", "STUDENT_MENTOR"].includes(currentUser.role?.name);
         
         // ✅ IMPORTANT: Mettre à jour la variable globale qui sera utilisée dans switchTab
         isAdminUser = window.isAdminUser;
@@ -1242,7 +1242,7 @@ async function chargerContactsAdmin() {
 // CHARGER CONVERSATIONS (CORRIGÉ POUR LES COOKIES)
 // ============================================================
 function chargerConversations() {
-    const hasAccess = isAdminUser || currentUser?.role?.name === "STUDENT";
+    const hasAccess = isAdminUser || ["STUDENT", "STUDENT_MENTOR"].includes(currentUser?.role?.name);
     const chatListId = getChatListId();
     const chatList = document.getElementById(chatListId);
     

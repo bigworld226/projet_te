@@ -4,7 +4,7 @@ import { requireAdminWithPermission } from "@/lib/permissions";
 import { verifyToken } from "@/lib/jwt";
 import { corsHeaders } from "@/lib/cors";
 
-const MESSAGING_ALLOWED_ROLES = new Set(["SUPERADMIN", "STUDENT_MANAGER"]);
+const MESSAGING_ALLOWED_ROLES = new Set(["SUPERADMIN", "STUDENT_MANAGER", "STUDENT_MENTOR"]);
 
 /**
  * GET /api/admin/messaging
@@ -12,6 +12,7 @@ const MESSAGING_ALLOWED_ROLES = new Set(["SUPERADMIN", "STUDENT_MANAGER"]);
  * (ou toutes si SUPERADMIN)
  */
 export async function GET(req: NextRequest) {
+  let currentActor: { id: string; roleName: string } | null = null;
   // Vérifier JWT token
   const authHeader = req.headers.get("authorization");
   if (authHeader) {
@@ -41,6 +42,7 @@ export async function GET(req: NextRequest) {
     if (!user || !MESSAGING_ALLOWED_ROLES.has(user.role.name)) {
       return NextResponse.json({ error: "Non autorisé" }, { status: 403, headers: corsHeaders });
     }
+    currentActor = { id: user.id, roleName: user.role.name };
 
     // Si admin, continuer avec les données JWT (pas de permission check pour le rollback)
   } else {
@@ -52,12 +54,19 @@ export async function GET(req: NextRequest) {
         { status: 403, headers: corsHeaders }
       );
     }
+    currentActor = { id: admin.id, roleName: admin.role.name };
   }
 
 
   try {
-    // Tous les admins avec MANAGE_DISCUSSIONS voient toutes les conversations
+    // Le mentor ne voit que ses conversations, les autres rôles voient tout.
+    const whereClause =
+      currentActor?.roleName === "STUDENT_MENTOR"
+        ? { participants: { some: { userId: currentActor.id } } }
+        : undefined;
+
     const conversations = await prisma.conversation.findMany({
+      where: whereClause,
       include: {
         application: {
           select: {
@@ -125,6 +134,7 @@ export async function POST(req: NextRequest) {
   // Vérifier JWT token
   const authHeader = req.headers.get("authorization");
   let adminId: string | null = null;
+  let roleName: string | null = null;
 
   if (authHeader) {
     const tokenPayload = verifyToken(authHeader);
@@ -151,6 +161,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Non autorisé" }, { status: 403, headers: corsHeaders });
     }
     adminId = user.id;
+    roleName = user.role.name;
   } else {
     // Sinon, utiliser l'authentification par session
     const admin = await requireAdminWithPermission(["MANAGE_DISCUSSIONS"]);
@@ -161,6 +172,7 @@ export async function POST(req: NextRequest) {
       );
     }
     adminId = admin.id;
+    roleName = admin.role.name;
   }
 
   try {
@@ -171,8 +183,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Message initial requis" }, { status: 400, headers: corsHeaders });
     }
 
-    // On inclut toujours l'admin créateur dans les participants
+    // On inclut toujours le créateur dans les participants
     const allParticipantIds = new Set<string>([adminId, ...(participantIds || [])]);
+
+    // Un mentor ne peut pas créer via applicationId (réservé au flux admin dossier).
+    if (roleName === "STUDENT_MENTOR" && applicationId) {
+      return NextResponse.json(
+        { error: "Le mentor ne peut pas créer une conversation liée à un dossier." },
+        { status: 403, headers: corsHeaders }
+      );
+    }
 
     // Si lié à une application, ajouter l'étudiant
     if (applicationId) {

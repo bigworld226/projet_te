@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import Navbar from "@/components/Navbar";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
+import { isAdminRole } from "@/lib/roles";
 
 const COUNTRIES = [
   { 
@@ -76,7 +77,7 @@ export default function HomeClient({ isConnected, isAdmin }: { isConnected: bool
         if (!res.ok) return;
         const me = await res.json();
         const roleName = me?.role?.name || me?.role;
-        if (roleName && roleName !== "STUDENT") {
+        if (roleName && isAdminRole(roleName)) {
           router.replace("/admin/dashboard");
         }
       } catch {
